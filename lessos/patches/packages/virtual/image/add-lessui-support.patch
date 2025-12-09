@@ -1,0 +1,12 @@
+--- a/packages/virtual/image/package.mk
++++ b/packages/virtual/image/package.mk
+@@ -14,6 +14,9 @@ PKG_LONGDESC="Root package used to build and create complete image"
+ # Multimedia support
+ [ ! "${MEDIACENTER}" = "no" ] && PKG_DEPENDS_TARGET+=" mediacenter"
+
++# LessOS bootstrap launcher
++[ "${LESSUI_SUPPORT}" = "yes" ] && PKG_DEPENDS_TARGET+=" lessui"
++
+ # Sound support
+ [ "${ALSA_SUPPORT}" = "yes" ] && PKG_DEPENDS_TARGET+=" alsa"
+

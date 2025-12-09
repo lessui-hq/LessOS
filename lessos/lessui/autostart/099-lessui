@@ -1,0 +1,15 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessUI (https://github.com/lessui-hq)
+
+# LessUI autostart configuration
+
+. /etc/profile.d/001-functions
+
+tocon "Configuring LessUI..."
+
+# Set LessUI as the startup application
+set_setting weston.startup "/usr/bin/start_lessui.sh"
+
+# Override UI_SERVICE for the main autostart script
+export UI_SERVICE="lessui.service"

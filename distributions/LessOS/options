@@ -1,0 +1,126 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessUI (https://github.com/lessui-hq)
+
+################################################################################
+# LessOS Distribution Options
+# A minimal Linux distribution for running LessUI (or any compatible launcher)
+#
+# This file inherits from ROCKNIX and overrides specific settings.
+################################################################################
+
+# Distribution identity
+  DISTRONAME="LessOS"
+  OSNAME="lessos"
+  DESCRIPTION="Minimal Linux for LessUI"
+  HOME_URL="https://github.com/lessui-hq/lessos"
+  WIKI_URL="https://github.com/lessui-hq/lessos"
+  BUG_REPORT_URL="https://github.com/lessui-hq/lessos/issues"
+
+# For updates (when implemented)
+  GIT_ORGANIZATION="lessui-hq"
+  GIT_REPO="lessos"
+
+# Root password
+  ROOT_PASSWORD="lessos"
+
+# Partition labels
+  DISTRO_BOOTLABEL="LESSOS"
+  DISTRO_DISKLABEL="STORAGE"
+
+################################################################################
+# Build optimizations
+################################################################################
+
+  LTO_SUPPORT="yes"
+  GOLD_SUPPORT="yes"
+  HARDENING_SUPPORT="no"
+
+################################################################################
+# Core features - ENABLED
+################################################################################
+
+# Essential system
+  GLIBC_LOCALES="no"
+  MODULES_PKG="yes"
+  SWAP_SUPPORT="yes"
+  SWAP_ENABLED_DEFAULT="yes"
+  SWAPSIZE="256"
+  SWAP_TYPE="zram"
+
+# Audio - ALSA only (no PipeWire)
+  PIPEWIRE_SUPPORT="no"
+  PULSEAUDIO_SUPPORT="no"
+
+# Storage
+  UDEVIL="yes"
+  EXFAT="yes"
+  NFS_SUPPORT="no"
+  NTFS3G="no"
+  HFSTOOLS="no"
+
+# Joystick
+  JOYSTICK_SUPPORT="yes"
+
+# LessOS bootstrap launcher
+  LESSUI_SUPPORT="yes"
+
+################################################################################
+# Features - DISABLED (to minimize image size)
+################################################################################
+
+# No EmulationStation or RetroArch
+  EMULATION_DEVICE="no"
+
+# No 32-bit support
+  ENABLE_32BIT="false"
+
+# No networking extras
+  BLUETOOTH_SUPPORT="no"
+  AVAHI_DAEMON="no"
+  SAMBA_SUPPORT="no"
+  SAMBA_SERVER="no"
+  SFTP_SERVER="no"
+  SIMPLE_HTTP_SERVER="no"
+  WIREGUARD_SUPPORT="no"
+  ZEROTIER_SUPPORT="no"
+  OPENVPN_SUPPORT="no"
+
+# No extras
+  REMOTE_SUPPORT="no"
+  CONTAINER_SUPPORT="no"
+  INSTALLER_SUPPORT="no"
+  TESTING="no"
+  OEM_SUPPORT="no"
+  DEBUG_PACKAGES="no"
+  INITRAMFS_PARTED_SUPPORT="no"
+
+# No dev tools
+  NANO_EDITOR="no"
+  HTOP_TOOL="no"
+  BTOP_TOOL="no"
+  CRON_SUPPORT="no"
+
+################################################################################
+# Image configuration
+################################################################################
+
+# Smaller system partition
+  SYSTEM_SIZE=512
+  SYSTEM_PART_START=32768
+  STORAGE_SIZE=32
+
+# Sources
+  DISTRO_MIRROR="https://github.com/ROCKNIX/distribution-sources/releases/download/sources"
+  GET_HANDLER_SUPPORT="archive git file"
+
+# No updates for now
+  ENABLE_UPDATES="no"
+
+################################################################################
+# Clean targets
+################################################################################
+
+  CLEAN_OS_BASE="emulators system-utils modules quirks autostart rocknix kernel-firmware"
+  CLEAN_NETWORK=""
+  CLEAN_EMU_32BIT="lib32 box86 pcsx_rearmed-lr arm"
+  CLEAN_WESTON="libdisplay-info sway"

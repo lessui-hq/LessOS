@@ -1,0 +1,19 @@
+[Unit]
+Description=LessUI Launcher
+After=rocknix-autostart.service
+Conflicts=emustation.service
+
+[Service]
+Environment=HOME=/storage
+ExecStart=/usr/bin/start_lessui.sh
+Restart=on-failure
+RestartSec=2
+StandardInput=tty
+StandardOutput=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+
+[Install]
+WantedBy=rocknix.target
