@@ -5,4 +5,5 @@
 # Override UI_SERVICE for LessOS
 # This replaces the default EmulationStation/sway setup with LessOS boot
 
+# shellcheck disable=SC2034  # UI_SERVICE is used by ROCKNIX autostart
 UI_SERVICE="lessos-boot.service"

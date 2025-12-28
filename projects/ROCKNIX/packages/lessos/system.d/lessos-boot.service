@@ -10,7 +10,7 @@ Requires=rocknix-automount.service
 Type=simple
 Environment=HOME=/storage
 Environment=XDG_RUNTIME_DIR=/var/run/0-runtime-dir
-EnvironmentFile=-/etc/profile
+# Note: lessos-boot sources /etc/profile itself for full shell environment
 ExecStart=/usr/bin/lessos-boot
 WorkingDirectory=/storage
 Restart=always
