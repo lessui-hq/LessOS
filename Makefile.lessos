@@ -1,0 +1,25 @@
+# LessOS Makefile - minimal launcher OS with LessUI
+# Include this from main Makefile with: -include Makefile.lessos
+
+# Non-docker builds
+LessOS-RK3566:
+	unset DEVICE_ROOT
+	DISTRO=LessOS PROJECT=ROCKNIX DEVICE=RK3566 ARCH=aarch64 ./scripts/build_distro
+
+LessOS-world: LessOS-RK3566
+
+# Docker builds - use clean environment (no host env pollution)
+# These explicit targets override the generic docker-% pattern
+docker-LessOS-%: DOCKER_IMAGE := "ghcr.io/rocknix/rocknix-build:latest"
+docker-LessOS-%: DOCKER_WORK_DIR := $(shell if [ -n "${DOCKER_WORK_DIR}" ]; then echo ${DOCKER_WORK_DIR}; else echo "$$(pwd)" ; fi)
+docker-LessOS-%: GLOBAL_SETTINGS := $(shell if [ -f "${HOME}/.ROCKNIX/options" ]; then echo "-v \"${HOME}/.ROCKNIX/options:${HOME}/.ROCKNIX/options\""; else echo ""; fi)
+docker-LessOS-%: LOCAL_SSH_KEYS_FILE := $(shell if [ -n "${LOCAL_SSH_KEYS_FILE}" ]; then echo "-v \"${LOCAL_SSH_KEYS_FILE}:${LOCAL_SSH_KEYS_FILE}\""; else echo ""; fi)
+docker-LessOS-%: UID := $(shell id -u)
+docker-LessOS-%: GID := $(shell id -g)
+docker-LessOS-%: PWD := $(shell pwd)
+docker-LessOS-%: DOCKER_CMD := $(shell if which docker 2>/dev/null 1>/dev/null; then echo "docker"; elif which podman 2>/dev/null 1>/dev/null; then echo "podman"; fi)
+docker-LessOS-%: PODMAN_ARGS := $(shell if echo "$$(docker --version 2>/dev/null || podman --version 2>/dev/null )" | grep podman 1>/dev/null ; then echo "--userns=keep-id --security-opt=label=disable -v /proc/mounts:/etc/mtab"; fi)
+docker-LessOS-%: INTERACTIVE := $(shell [ -t 0 ] && echo "-it")
+docker-LessOS-%:
+	@echo "# LessOS: clean Docker environment" > .env
+	BUILD_DIR=$(DOCKER_WORK_DIR) $(DOCKER_CMD) run $(PODMAN_ARGS) $(INTERACTIVE) --init --env-file .env --rm --user $(UID):$(GID) $(GLOBAL_SETTINGS) $(LOCAL_SSH_KEYS_FILE) -v $(PWD):$(DOCKER_WORK_DIR) -w $(DOCKER_WORK_DIR) $(DOCKER_EXTRA_OPTS) $(DOCKER_IMAGE) make LessOS-$*
