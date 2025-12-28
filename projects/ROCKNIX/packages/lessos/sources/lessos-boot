@@ -1,0 +1,67 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+#
+# LessOS boot script - finds and executes init.sh from lessos folder
+# Checks SD2 (external) first, then falls back to SD1 (internal)
+
+. /etc/profile
+
+BOOTLOG="/var/log/lessos-boot.log"
+
+log() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S'): $*" >> ${BOOTLOG}
+}
+
+log "LessOS boot starting..."
+
+# Paths to check for lessos/init.sh
+# Priority: SD2 (external) -> SD1 (internal) -> storage root
+LESSOS_PATHS=(
+  "/storage/games-external/lessos"
+  "/storage/games-internal/lessos"
+  "/storage/lessos"
+)
+
+INIT_SCRIPT=""
+
+# Find the first available init.sh
+for path in "${LESSOS_PATHS[@]}"; do
+  log "Checking ${path}/init.sh..."
+  if [ -f "${path}/init.sh" ]; then
+    INIT_SCRIPT="${path}/init.sh"
+    log "Found init.sh at ${path}"
+    break
+  fi
+done
+
+if [ -z "${INIT_SCRIPT}" ]; then
+  log "ERROR: No init.sh found in any lessos folder"
+  log "Expected locations:"
+  for path in "${LESSOS_PATHS[@]}"; do
+    log "  - ${path}/init.sh"
+  done
+
+  # Show error on console/display
+  echo ""
+  echo "=========================================="
+  echo "  LessOS: No init.sh found!"
+  echo "=========================================="
+  echo ""
+  echo "Please place LessUI with lessos/init.sh in:"
+  echo "  - /storage/lessos/init.sh"
+  echo ""
+  echo "Or on external SD card:"
+  echo "  - /storage/games-external/lessos/init.sh"
+  echo ""
+
+  # Wait before retry
+  sleep 10
+  exit 1
+fi
+
+# Change to the lessos directory
+cd "$(dirname "${INIT_SCRIPT}")"
+
+log "Executing ${INIT_SCRIPT}"
+exec "${INIT_SCRIPT}"

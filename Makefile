@@ -83,6 +83,13 @@ SM8650:
 	unset DEVICE_ROOT
 	PROJECT=ROCKNIX DEVICE=SM8650 ARCH=aarch64 ./scripts/build_distro
 
+# LessOS builds - minimal launcher OS with LessUI
+LessOS-RK3566:
+	unset DEVICE_ROOT
+	DISTRO=LessOS PROJECT=ROCKNIX DEVICE=RK3566 ARCH=aarch64 ./scripts/build_distro
+
+LessOS-world: LessOS-RK3566
+
 update:
 	PROJECT=ROCKNIX DEVICE=RK3588 ARCH=aarch64 ./scripts/update_packages
 

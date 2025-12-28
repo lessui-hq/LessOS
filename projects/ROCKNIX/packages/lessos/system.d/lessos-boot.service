@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+
+[Unit]
+Description=LessOS Boot Service
+After=rocknix-automount.service
+Requires=rocknix-automount.service
+
+[Service]
+Type=simple
+Environment=HOME=/storage
+Environment=XDG_RUNTIME_DIR=/var/run/0-runtime-dir
+EnvironmentFile=-/etc/profile
+ExecStart=/usr/bin/lessos-boot
+WorkingDirectory=/storage
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=rocknix.target

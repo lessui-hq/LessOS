@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+#
+# Override UI_SERVICE for LessOS
+# This replaces the default EmulationStation/sway setup with LessOS boot
+
+UI_SERVICE="lessos-boot.service"

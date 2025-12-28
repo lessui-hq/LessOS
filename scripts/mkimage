@@ -91,26 +91,64 @@ fi
 echo "image: creating sparse file for part2..."
 STORAGE_PART_COUNT=$((${STORAGE_PART_END} - ${STORAGE_PART_START} + 1))
 sync
-dd if="${DISK}" of="${IMG_TMP}/part2.ext4" bs=512 count=0 seek="${STORAGE_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
 
-# create filesystem on part2
-echo "image: creating filesystem on part2..."
-mke2fs -F -q -t ext4 -T ext4 -O ^orphan_file -m 0 "${IMG_TMP}/part2.ext4"
-tune2fs -L "${DISTRO_DISKLABEL}" -U ${UUID_STORAGE} "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
-e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
-sync
+if [ "${DISTRO}" = "LessOS" ]; then
+  # LessOS: Use exFAT for storage partition
+  dd if="${DISK}" of="${IMG_TMP}/part2.exfat" bs=512 count=0 seek="${STORAGE_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
 
-# add resize mark
-mkdir "${IMG_TMP}/part2.fs"
-touch "${IMG_TMP}/part2.fs/.please_resize_me"
-echo "image: populating filesystem on part2..."
-populatefs -U -d "${IMG_TMP}/part2.fs" "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
-sync
-e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+  echo "image: creating exFAT filesystem on part2..."
+  mkfs.exfat -n "${DISTRO_DISKLABEL}" "${IMG_TMP}/part2.exfat" >"${SAVE_ERROR}" 2>&1 || show_error
+  sync
 
-# merge part2 into disk image
-echo "image: merging part2 into disk image..."
-dd if="${IMG_TMP}/part2.ext4" of="${DISK}" bs=512 seek="${STORAGE_PART_START}" conv=fsync,notrunc >"${SAVE_ERROR}" 2>&1 || show_error
+  # Mount exFAT and populate with LessUI files
+  echo "image: populating exFAT filesystem on part2..."
+  LOOP_DEV=$(losetup -f --show "${IMG_TMP}/part2.exfat")
+  mkdir -p "${IMG_TMP}/part2.mnt"
+  mount -t exfat "${LOOP_DEV}" "${IMG_TMP}/part2.mnt" >"${SAVE_ERROR}" 2>&1 || show_error
+
+  # Copy LessUI files if staged
+  if [ -d "${INSTALL}/usr/share/lessui" ]; then
+    echo "image: copying LessUI files to storage..."
+    cp -r "${INSTALL}/usr/share/lessui/"* "${IMG_TMP}/part2.mnt/" 2>/dev/null || true
+  fi
+
+  # Create basic directory structure
+  mkdir -p "${IMG_TMP}/part2.mnt/lessos"
+  mkdir -p "${IMG_TMP}/part2.mnt/Roms"
+  mkdir -p "${IMG_TMP}/part2.mnt/Saves"
+  mkdir -p "${IMG_TMP}/part2.mnt/Bios"
+
+  sync
+  umount "${IMG_TMP}/part2.mnt"
+  losetup -d "${LOOP_DEV}"
+
+  # merge part2 into disk image
+  echo "image: merging part2 into disk image..."
+  dd if="${IMG_TMP}/part2.exfat" of="${DISK}" bs=512 seek="${STORAGE_PART_START}" conv=fsync,notrunc >"${SAVE_ERROR}" 2>&1 || show_error
+
+else
+  # Standard: Use ext4 for storage partition (ROCKNIX default)
+  dd if="${DISK}" of="${IMG_TMP}/part2.ext4" bs=512 count=0 seek="${STORAGE_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
+
+  # create filesystem on part2
+  echo "image: creating filesystem on part2..."
+  mke2fs -F -q -t ext4 -T ext4 -O ^orphan_file -m 0 "${IMG_TMP}/part2.ext4"
+  tune2fs -L "${DISTRO_DISKLABEL}" -U ${UUID_STORAGE} "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+  e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+  sync
+
+  # add resize mark
+  mkdir "${IMG_TMP}/part2.fs"
+  touch "${IMG_TMP}/part2.fs/.please_resize_me"
+  echo "image: populating filesystem on part2..."
+  populatefs -U -d "${IMG_TMP}/part2.fs" "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+  sync
+  e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+
+  # merge part2 into disk image
+  echo "image: merging part2 into disk image..."
+  dd if="${IMG_TMP}/part2.ext4" of="${DISK}" bs=512 seek="${STORAGE_PART_START}" conv=fsync,notrunc >"${SAVE_ERROR}" 2>&1 || show_error
+fi
 
 # create disk image for virtual appliance
 if [ "${PROJECT}" = "Generic" ]; then

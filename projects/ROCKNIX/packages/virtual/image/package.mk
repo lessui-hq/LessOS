@@ -102,6 +102,9 @@ fi
 # modules packages
 [ "${MODULES_PKG}" = "yes" ] && PKG_DEPENDS_TARGET+=" modules"
 
+# LessOS support - include lessos boot package
+[ "${DISTRO}" = "LessOS" ] && PKG_DEPENDS_TARGET+=" lessos"
+
 # Entware support
 mkdir -p ${INSTALL}
 ln -sf /storage/.opt ${INSTALL}/opt
