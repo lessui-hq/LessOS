@@ -15,6 +15,18 @@ log() {
 
 log "LessOS boot starting..."
 
+# First boot: copy staged LessUI files to storage if needed
+LESSUI_STAGED="/usr/share/lessui"
+LESSUI_MARKER="/storage/.lessui-installed"
+
+if [ -d "${LESSUI_STAGED}" ] && [ ! -f "${LESSUI_MARKER}" ]; then
+  log "First boot: copying staged LessUI files to /storage..."
+  cp -r "${LESSUI_STAGED}/"* /storage/ 2>/dev/null || true
+  touch "${LESSUI_MARKER}"
+  log "LessUI files copied to storage"
+  sync
+fi
+
 # Paths to check for lessos/init.sh
 # Priority: SD2 (external) -> SD1 (internal) -> storage root
 LESSOS_PATHS=(

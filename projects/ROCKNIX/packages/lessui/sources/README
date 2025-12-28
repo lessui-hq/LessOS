@@ -1,0 +1,2 @@
+# Placeholder to ensure sources directory is not empty
+# LessUI files are staged during makeinstall_target from LESSUI_SRC path

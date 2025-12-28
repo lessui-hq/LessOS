@@ -102,8 +102,8 @@ fi
 # modules packages
 [ "${MODULES_PKG}" = "yes" ] && PKG_DEPENDS_TARGET+=" modules"
 
-# LessOS support - include lessos boot package
-[ "${DISTRO}" = "LessOS" ] && PKG_DEPENDS_TARGET+=" lessos"
+# LessOS support - include lessos boot package and exfatprogs:host for mkimage
+[ "${DISTRO}" = "LessOS" ] && PKG_DEPENDS_TARGET+=" lessos exfatprogs:host"
 
 # Entware support
 mkdir -p ${INSTALL}

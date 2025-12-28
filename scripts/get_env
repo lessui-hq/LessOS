@@ -1,2 +1,30 @@
 #!/usr/bin/env bash
-for var in $(compgen -e); do echo "$var=${!var}"; done
+# Export only safe environment variables to Docker container
+# Prevents host development tools from polluting the build environment
+
+# Whitelist of safe environment variables
+SAFE_VARS=(
+    HOME
+    USER
+    SHELL
+    TERM
+    LANG
+    LC_ALL
+    LC_CTYPE
+    LANGUAGE
+    TZ
+    DISPLAY
+    SSH_AUTH_SOCK
+    EDITOR
+    VISUAL
+    COLORTERM
+)
+
+for var in "${SAFE_VARS[@]}"; do
+    if [ -n "${!var}" ]; then
+        echo "$var=${!var}"
+    fi
+done
+
+# Use a clean standard PATH instead of host PATH (which may contain WSL/Windows paths)
+echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"

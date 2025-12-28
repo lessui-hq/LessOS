@@ -100,27 +100,11 @@ if [ "${DISTRO}" = "LessOS" ]; then
   mkfs.exfat -n "${DISTRO_DISKLABEL}" "${IMG_TMP}/part2.exfat" >"${SAVE_ERROR}" 2>&1 || show_error
   sync
 
-  # Mount exFAT and populate with LessUI files
-  echo "image: populating exFAT filesystem on part2..."
-  LOOP_DEV=$(losetup -f --show "${IMG_TMP}/part2.exfat")
-  mkdir -p "${IMG_TMP}/part2.mnt"
-  mount -t exfat "${LOOP_DEV}" "${IMG_TMP}/part2.mnt" >"${SAVE_ERROR}" 2>&1 || show_error
-
-  # Copy LessUI files if staged
+  # Note: LessUI files staged in /usr/share/lessui will be copied to storage on first boot
+  # by the lessos-boot service. This avoids requiring root/losetup during image creation.
   if [ -d "${INSTALL}/usr/share/lessui" ]; then
-    echo "image: copying LessUI files to storage..."
-    cp -r "${INSTALL}/usr/share/lessui/"* "${IMG_TMP}/part2.mnt/" 2>/dev/null || true
+    echo "image: LessUI files staged - will be copied to storage on first boot"
   fi
-
-  # Create basic directory structure
-  mkdir -p "${IMG_TMP}/part2.mnt/lessos"
-  mkdir -p "${IMG_TMP}/part2.mnt/Roms"
-  mkdir -p "${IMG_TMP}/part2.mnt/Saves"
-  mkdir -p "${IMG_TMP}/part2.mnt/Bios"
-
-  sync
-  umount "${IMG_TMP}/part2.mnt"
-  losetup -d "${LOOP_DEV}"
 
   # merge part2 into disk image
   echo "image: merging part2 into disk image..."
