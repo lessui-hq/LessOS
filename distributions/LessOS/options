@@ -183,7 +183,7 @@
   SYSTEM_PART_START=32768
 
 # Size of storage partition, in MB. Must be >=32
-# Using larger size since exFAT doesn't support resize
+# Initial size - will be expanded to full SD card on first boot
   STORAGE_SIZE=4096
 
 # Default supported get handlers (archive, git, file etc.)

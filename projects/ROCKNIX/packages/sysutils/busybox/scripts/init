@@ -462,12 +462,7 @@ hdmi_con() {
 }
 
 load_splash() {
-  # plymouth-lite (ply-image) for PNG splash, rocknix-splash for SVG
-  if [ -x /usr/bin/ply-image ]; then
-    /usr/bin/ply-image
-  elif [ -x /usr/bin/rocknix-splash ]; then
-    /usr/bin/rocknix-splash
-  fi
+  /usr/bin/rocknix-splash
 
   echo -en "\033[1000H\033[2K$(cat /sysroot/etc/issue)\n\n" >/dev/console
   if [ -f "/storage/.configured" ]

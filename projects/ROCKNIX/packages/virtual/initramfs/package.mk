@@ -7,12 +7,7 @@ PKG_VERSION=""
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.openelec.tv"
 PKG_URL=""
-# LessOS uses plymouth-lite for customizable PNG splash; ROCKNIX uses hardcoded SVG splash
-if [ "${DISTRO}" = "LessOS" ]; then
-  PKG_DEPENDS_TARGET="libc:init glibc:init busybox:init util-linux:init e2fsprogs:init dosfstools:init spleen-font:init avfs:init plymouth-lite:init"
-else
-  PKG_DEPENDS_TARGET="libc:init glibc:init busybox:init util-linux:init e2fsprogs:init dosfstools:init spleen-font:init avfs:init rocknix-splash:init"
-fi
+PKG_DEPENDS_TARGET="libc:init glibc:init busybox:init util-linux:init e2fsprogs:init dosfstools:init spleen-font:init avfs:init rocknix-splash:init"
 PKG_SECTION="virtual"
 PKG_LONGDESC="debug is a Metapackage for installing initramfs"
 
@@ -22,4 +17,9 @@ fi
 
 if [ "${INITRAMFS_PARTED_SUPPORT}" = yes ]; then
   PKG_DEPENDS_TARGET="${PKG_DEPENDS_TARGET} parted:init"
+fi
+
+# LessOS uses FAT32 for storage - needs fatresize for partition expansion
+if [ "${DISTRO}" = "LessOS" ]; then
+  PKG_DEPENDS_TARGET="${PKG_DEPENDS_TARGET} fatresize:init"
 fi
