@@ -6,7 +6,7 @@ PKG_VERSION="1.0.0"
 PKG_LICENSE="GPL-2.0"
 PKG_SITE="https://github.com/shauninman/LessOS"
 PKG_URL=""
-PKG_DEPENDS_TARGET="toolchain lessui"
+PKG_DEPENDS_TARGET="toolchain"
 PKG_LONGDESC="LessOS boot system - launches LessUI from lessos/init.sh"
 PKG_TOOLCHAIN="manual"
 

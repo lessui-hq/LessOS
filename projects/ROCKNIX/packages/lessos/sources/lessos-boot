@@ -26,7 +26,13 @@ log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S'): $*" >> "${BOOTLOG}"
 }
 
-log "LessOS boot starting..."
+# Show status message on console
+status() {
+  echo "==> $*"
+  log "$*"
+}
+
+status "LessOS boot starting..."
 
 # ---------------------------------------------------------
 # Set up environment variables for init.sh
@@ -38,6 +44,8 @@ export LESSOS_PLATFORM="${HW_DEVICE}"
 export LESSOS_ARCH="${HW_ARCH}"
 export LESSOS_VERSION="${OS_VERSION}"
 # LESSOS_STORAGE is set later based on where init.sh is found
+
+status "Device: ${LESSOS_DEVICE} (${LESSOS_PLATFORM})"
 
 # Get display info from framebuffer
 if [ -e "/sys/class/graphics/fb0/virtual_size" ]; then
@@ -83,20 +91,6 @@ if [ -f "/storage/.config/profile.d/001-device_config" ]; then
 fi
 
 log "Environment: DEVICE=${LESSOS_DEVICE} PLATFORM=${LESSOS_PLATFORM} DISPLAY=${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}"
-log "Note: LESSOS_STORAGE will be set based on init.sh location"
-
-# First boot: copy staged LessUI files to storage if needed
-LESSUI_STAGED="/usr/share/lessui"
-LESSUI_MARKER="/storage/.lessui-installed"
-
-if [ -d "${LESSUI_STAGED}" ] && [ ! -f "${LESSUI_MARKER}" ]; then
-  log "First boot: copying staged LessUI files to /storage..."
-  # Use cp -a to preserve permissions and copy all files including dotfiles
-  cp -a "${LESSUI_STAGED}/." /storage/ 2>/dev/null || true
-  touch "${LESSUI_MARKER}"
-  log "LessUI files copied to storage"
-  sync
-fi
 
 # Paths to check for lessos/init.sh
 # Priority: SD2 (external) -> SD1 (internal) -> storage root
@@ -110,6 +104,7 @@ LESSOS_PATHS=(
 INIT_SCRIPT=""
 
 # Find the first available init.sh
+status "Looking for init.sh..."
 for entry in "${LESSOS_PATHS[@]}"; do
   path="${entry%%:*}"
   storage="${entry##*:}"
@@ -117,7 +112,7 @@ for entry in "${LESSOS_PATHS[@]}"; do
   if [ -f "${path}/init.sh" ]; then
     INIT_SCRIPT="${path}/init.sh"
     export LESSOS_STORAGE="${storage}"
-    log "Found init.sh at ${path}, storage root: ${storage}"
+    status "Found: ${path}/init.sh"
     break
   fi
 done
@@ -161,6 +156,7 @@ if [ ! -x "${INIT_SCRIPT}" ]; then
   chmod +x "${INIT_SCRIPT}" 2>/dev/null || true
 fi
 
+status "Launching LessUI..."
 log "Executing ${INIT_SCRIPT}"
 # shellcheck disable=SC2093  # exec is intentional - replaces this process with init.sh
 exec "${INIT_SCRIPT}"
