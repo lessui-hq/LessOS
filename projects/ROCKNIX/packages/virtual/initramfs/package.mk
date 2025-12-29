@@ -7,7 +7,12 @@ PKG_VERSION=""
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.openelec.tv"
 PKG_URL=""
-PKG_DEPENDS_TARGET="libc:init glibc:init busybox:init util-linux:init e2fsprogs:init dosfstools:init spleen-font:init avfs:init rocknix-splash:init"
+# LessOS uses plymouth-lite for customizable PNG splash; ROCKNIX uses hardcoded SVG splash
+if [ "${DISTRO}" = "LessOS" ]; then
+  PKG_DEPENDS_TARGET="libc:init glibc:init busybox:init util-linux:init e2fsprogs:init dosfstools:init spleen-font:init avfs:init plymouth-lite:init"
+else
+  PKG_DEPENDS_TARGET="libc:init glibc:init busybox:init util-linux:init e2fsprogs:init dosfstools:init spleen-font:init avfs:init rocknix-splash:init"
+fi
 PKG_SECTION="virtual"
 PKG_LONGDESC="debug is a Metapackage for installing initramfs"
 

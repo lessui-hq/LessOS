@@ -59,6 +59,8 @@ and added `exfatprogs:host` to LessOS image dependencies in `projects/ROCKNIX/pa
 - `scripts/mkimage` - exFAT support for LessOS
 - `packages/sysutils/exfatprogs/package.mk` - Add host build support
 - `projects/ROCKNIX/packages/virtual/image/package.mk` - Include lessos package
+- `projects/ROCKNIX/packages/virtual/initramfs/package.mk` - Use plymouth-lite for LessOS splash
+- `projects/ROCKNIX/packages/sysutils/busybox/scripts/init` - Flexible splash binary (ply-image or rocknix-splash)
 
 ## Files Added (LessOS-specific)
 - `Makefile.lessos` - All LessOS build targets (clean Docker env)
@@ -72,14 +74,16 @@ and added `exfatprogs:host` to LessOS image dependencies in `projects/ROCKNIX/pa
 
 **Goal:** Make it easier to stay up-to-date with upstream ROCKNIX by reducing direct file modifications. Use patches and overrides instead so changes are self-documenting.
 
-### Current Modified ROCKNIX Files (4)
+### Current Modified ROCKNIX Files (6)
 
 | File | Change Type | Proposed Approach |
 |------|-------------|-------------------|
 | `Makefile` | +2 lines (include Makefile.lessos) | **Keep as-is** - minimal, just an include |
 | `scripts/mkimage` | +38/-18 (exFAT support) | **Patch** - create `distributions/LessOS/patches/mkimage.patch` |
-| `packages/sysutils/exfatprogs/package.mk` | +1 line (host deps) | **Upstream** - this is a bug fix, should be accepted |
-| `projects/ROCKNIX/packages/virtual/image/package.mk` | +3 lines (lessos pkg) | **Patch** - create `distributions/LessOS/patches/image-package.patch` |
+| `packages/sysutils/exfatprogs/package.mk` | +1 line (host deps) | **Patch** |
+| `projects/ROCKNIX/packages/virtual/image/package.mk` | +3 lines (lessos pkg) | **Patch** |
+| `projects/ROCKNIX/packages/virtual/initramfs/package.mk` | +5 lines (plymouth-lite) | **Patch** |
+| `projects/ROCKNIX/packages/sysutils/busybox/scripts/init` | +5 lines (flexible splash) | **Patch** - backwards compatible |
 
 ### Implementation Plan
 
@@ -105,4 +109,3 @@ and added `exfatprogs:host` to LessOS image dependencies in `projects/ROCKNIX/pa
 
 ### Notes
 - Wait until build is tested and stable before creating patches
-- Consider upstreaming `exfatprogs` fix - it's a genuine bug (missing host dependency)
