@@ -102,7 +102,7 @@ fi
 # modules packages
 [ "${MODULES_PKG}" = "yes" ] && PKG_DEPENDS_TARGET+=" modules"
 
-# LessOS support - boot package (storage payload copied directly by mkimage)
+# LessOS support - boot package
 [ "${DISTRO}" = "LessOS" ] && PKG_DEPENDS_TARGET+=" lessos"
 
 # Entware support

@@ -18,8 +18,3 @@ fi
 if [ "${INITRAMFS_PARTED_SUPPORT}" = yes ]; then
   PKG_DEPENDS_TARGET="${PKG_DEPENDS_TARGET} parted:init"
 fi
-
-# LessOS uses FAT32 for storage - needs fatresize for partition expansion
-if [ "${DISTRO}" = "LessOS" ]; then
-  PKG_DEPENDS_TARGET="${PKG_DEPENDS_TARGET} fatresize:init"
-fi
