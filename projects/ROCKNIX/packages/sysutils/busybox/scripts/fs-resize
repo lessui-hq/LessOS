@@ -12,7 +12,6 @@ StartProgressLog() {
 
 if [ -e /storage/.please_resize_me ] ; then
   . /usr/lib/rocknix/functions
-  . /etc/os-release
 
   hidecursor
 
@@ -61,29 +60,9 @@ if [ -e /storage/.please_resize_me ] ; then
     echo ""
 
     StartProgressLog spinner "Resizing partition...   " "parted -s -f -m $DISK resizepart $PARTNUM 100% >>$LOG 2>&1"
-
-    # Detect filesystem type
-    FSTYPE=$(blkid -s TYPE -o value $PART)
-    echo "Filesystem type: $FSTYPE" >>$LOG
-
-    if [ "$FSTYPE" = "vfat" ]; then
-      # FAT32 needs fatresize to expand filesystem
-      echo "$FSTYPE detected - using fatresize" >>$LOG
-      if command -v fatresize >/dev/null 2>&1; then
-        StartProgressLog spinner "Resizing FAT32 filesystem... " "fatresize -s max $PART >>$LOG 2>&1"
-      else
-        echo "WARNING: fatresize not available, filesystem not resized" >>$LOG
-      fi
-    elif [ "$FSTYPE" = "exfat" ]; then
-      # exFAT doesn't have a resize tool - would need to recreate
-      echo "$FSTYPE detected - no resize tool available" >>$LOG
-    else
-      # ext4 or other - do full resize
-      StartProgressLog spinner "Checking file system... " "e2fsck -f -p $PART >>$LOG 2>&1"
-      StartProgressLog spinner "Resizing file system... " "resize2fs $PART >>$LOG 2>&1"
-      StartProgressLog spinner "Regenerating UUIDs...   " "tune2fs $PART -U random >>$LOG 2>&1; fatlabel -i -r ${DISK}p1 >>$LOG 2>&1"
-    fi
-
+    StartProgressLog spinner "Checking file system... " "e2fsck -f -p $PART >>$LOG 2>&1"
+    StartProgressLog spinner "Resizing file system... " "resize2fs $PART >>$LOG 2>&1"
+    StartProgressLog spinner "Regenerating UUIDs...   " "tune2fs $PART -U random >>$LOG 2>&1; fatlabel -i -r ${DISK}p1 >>$LOG 2>&1"
     StartProgressLog spinner "Syncing to disk...      " "sync >>$LOG 2>&1"
     StartProgress countdown "Rebooting in 5s...     " 5 "NOW"
   else

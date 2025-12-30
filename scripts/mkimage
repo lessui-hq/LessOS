@@ -72,21 +72,11 @@ STORAGE_PART_END=$((${STORAGE_PART_START} + (${STORAGE_SIZE} * 1024 * 1024 / 512
 
 if [ "${DISK_LABEL}" = "gpt" ]; then
   parted -s "${DISK}" -a min unit s mkpart system fat32 ${SYSTEM_PART_START} ${SYSTEM_PART_END}
-  if [ "${DISTRO}" = "LessOS" ]; then
-    # Use fat32 type hint for exFAT compatibility
-    parted -s "${DISK}" -a min unit s mkpart storage fat32 ${STORAGE_PART_START} ${STORAGE_PART_END}
-  else
-    parted -s "${DISK}" -a min unit s mkpart storage ext4 ${STORAGE_PART_START} ${STORAGE_PART_END}
-  fi
+  parted -s "${DISK}" -a min unit s mkpart storage ext4 ${STORAGE_PART_START} ${STORAGE_PART_END}
   parted -s "${DISK}" set 1 legacy_boot on
 else
   parted -s "${DISK}" -a min unit s mkpart primary fat32 ${SYSTEM_PART_START} ${SYSTEM_PART_END}
-  if [ "${DISTRO}" = "LessOS" ]; then
-    # Use fat32 type hint for exFAT compatibility
-    parted -s "${DISK}" -a min unit s mkpart primary fat32 ${STORAGE_PART_START} ${STORAGE_PART_END}
-  else
-    parted -s "${DISK}" -a min unit s mkpart primary ext4 ${STORAGE_PART_START} ${STORAGE_PART_END}
-  fi
+  parted -s "${DISK}" -a min unit s mkpart primary ext4 ${STORAGE_PART_START} ${STORAGE_PART_END}
   parted -s "${DISK}" set 1 boot on
 fi
 sync
@@ -101,53 +91,26 @@ fi
 echo "image: creating sparse file for part2..."
 STORAGE_PART_COUNT=$((${STORAGE_PART_END} - ${STORAGE_PART_START} + 1))
 sync
+dd if="${DISK}" of="${IMG_TMP}/part2.ext4" bs=512 count=0 seek="${STORAGE_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
 
-if [ "${DISTRO}" = "LessOS" ]; then
-  # LessOS: Use FAT32 for storage partition (mtools compatible for adding files)
-  dd if=/dev/zero of="${IMG_TMP}/part2.fat" bs=512 count=0 seek="${STORAGE_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
+# create filesystem on part2
+echo "image: creating filesystem on part2..."
+mke2fs -F -q -t ext4 -T ext4 -O ^orphan_file -m 0 "${IMG_TMP}/part2.ext4"
+tune2fs -L "${DISTRO_DISKLABEL}" -U ${UUID_STORAGE} "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+sync
 
-  echo "image: creating FAT32 filesystem on part2..."
-  # mformat -N expects 32-bit serial (8 hex chars), use first 8 chars of UUID
-  STORAGE_SERIAL="${UUID_STORAGE:0:8}"
-  mformat -i "${IMG_TMP}/part2.fat" -v "${DISTRO_DISKLABEL}" -N "${STORAGE_SERIAL}" :: >"${SAVE_ERROR}" 2>&1 || show_error
-  sync
+# add resize mark
+mkdir "${IMG_TMP}/part2.fs"
+touch "${IMG_TMP}/part2.fs/.please_resize_me"
+echo "image: populating filesystem on part2..."
+populatefs -U -d "${IMG_TMP}/part2.fs" "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+sync
+e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
 
-  # add resize marker
-  echo "image: adding resize marker to part2..."
-  touch "${IMG_TMP}/.please_resize_me"
-  mcopy -i "${IMG_TMP}/part2.fat" -o "${IMG_TMP}/.please_resize_me" :: >"${SAVE_ERROR}" 2>&1 || show_error
-
-  # verify filesystem
-  echo "image: checking filesystem on part2..."
-  fsck.fat -n "${IMG_TMP}/part2.fat" >"${SAVE_ERROR}" 2>&1 || show_error
-
-  # merge part2 into disk image
-  echo "image: merging part2 into disk image..."
-  dd if="${IMG_TMP}/part2.fat" of="${DISK}" bs=512 seek="${STORAGE_PART_START}" conv=fsync,notrunc >"${SAVE_ERROR}" 2>&1 || show_error
-
-else
-  # Standard: Use ext4 for storage partition (ROCKNIX default)
-  dd if="${DISK}" of="${IMG_TMP}/part2.ext4" bs=512 count=0 seek="${STORAGE_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
-
-  # create filesystem on part2
-  echo "image: creating filesystem on part2..."
-  mke2fs -F -q -t ext4 -T ext4 -O ^orphan_file -m 0 "${IMG_TMP}/part2.ext4"
-  tune2fs -L "${DISTRO_DISKLABEL}" -U ${UUID_STORAGE} "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
-  e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
-  sync
-
-  # add resize mark
-  mkdir "${IMG_TMP}/part2.fs"
-  touch "${IMG_TMP}/part2.fs/.please_resize_me"
-  echo "image: populating filesystem on part2..."
-  populatefs -U -d "${IMG_TMP}/part2.fs" "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
-  sync
-  e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
-
-  # merge part2 into disk image
-  echo "image: merging part2 into disk image..."
-  dd if="${IMG_TMP}/part2.ext4" of="${DISK}" bs=512 seek="${STORAGE_PART_START}" conv=fsync,notrunc >"${SAVE_ERROR}" 2>&1 || show_error
-fi
+# merge part2 into disk image
+echo "image: merging part2 into disk image..."
+dd if="${IMG_TMP}/part2.ext4" of="${DISK}" bs=512 seek="${STORAGE_PART_START}" conv=fsync,notrunc >"${SAVE_ERROR}" 2>&1 || show_error
 
 # create disk image for virtual appliance
 if [ "${PROJECT}" = "Generic" ]; then
