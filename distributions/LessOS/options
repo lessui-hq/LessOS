@@ -134,7 +134,7 @@
   JOYSTICK_SUPPORT="yes"
 
 # Support for partitioning and formating disks in initramfs (yes / no)
-  INITRAMFS_PARTED_SUPPORT="no"
+  INITRAMFS_PARTED_SUPPORT="yes"
 
 # build with swap support (yes / no)
   SWAP_SUPPORT="yes"
@@ -183,8 +183,8 @@
   SYSTEM_PART_START=32768
 
 # Size of storage partition, in MB. Must be >=32
-# Initial size - will be expanded to full SD card on first boot
-  STORAGE_SIZE=4096
+# Fixed size - third partition (LESSUI) will be created on first boot
+  STORAGE_SIZE=512
 
 # Default supported get handlers (archive, git, file etc.)
   GET_HANDLER_SUPPORT="archive git file"
