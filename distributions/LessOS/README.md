@@ -7,18 +7,17 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 ## Architecture Overview
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                        Device                            │
-├─────────────────────────────┬────────────────────────────┤
-│      Partition 1 (FAT32)    │    Partition 2 (FAT32)     │
-│         System/Boot         │     Storage (/storage)     │
-├─────────────────────────────┼────────────────────────────┤
-│  - Linux kernel             │  - lessos/init.sh          │
-│  - System image (squashfs)  │  - LessUI binary & assets  │
-│  - Device trees             │  - Roms/                   │
-│                             │  - Saves/                  │
-│                             │  - Bios/                   │
-└─────────────────────────────┴────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                   Device                                     │
+├─────────────────────────┬──────────────────────┬────────────────────────────┤
+│   Partition 1 (FAT32)   │  Partition 2 (ext4)  │    Partition 3 (exFAT)     │
+│       System/Boot       │  Storage (/storage)  │     LESSUI (/lessui)       │
+├─────────────────────────┼──────────────────────┼────────────────────────────┤
+│  - Linux kernel         │  - Config files      │  - LessUI binary & assets  │
+│  - System image         │  - LessUI.zip        │  - Roms/                   │
+│  - Device trees         │  - lessos/init.sh    │  - Saves/                  │
+│                         │                      │  - Bios/                   │
+└─────────────────────────┴──────────────────────┴────────────────────────────┘
           Optional: External SD mounted at /storage2
 ```
 
@@ -27,7 +26,7 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 | Feature | ROCKNIX | LessOS |
 |---------|---------|--------|
 | Package count | ~410 | ~217 |
-| Storage filesystem | ext4 | FAT32 |
+| Storage filesystem | ext4 | ext4 + exFAT (LESSUI) |
 | Frontend | EmulationStation | LessUI |
 | 32-bit support | Yes | No |
 | Emulator packages | Built-in | None (handled by LessUI) |
@@ -38,7 +37,8 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 ```
 1. Device powers on
    │
-2. First boot: fs-resize expands partition 2 to fill SD card, reboots
+2. First boot: fs-resize expands partition 2, creates partition 3 (LESSUI),
+   │            extracts LessUI.zip to LESSUI partition, reboots
    │
 3. lessos-automount.service mounts external SD to /storage2 (if present)
    │
@@ -63,11 +63,22 @@ LessOS checks for `lessos/init.sh` in multiple locations, allowing you to:
 /usr/bin/lessos-boot       # Boot script that launches init.sh
 ```
 
-### Storage Partition (FAT32, user-accessible)
+### Storage Partition (ext4, 512MB)
 ```
 /storage/
-└── lessos/
-    └── init.sh            # Entry point script (launched by lessos-boot)
+├── lessos/
+│   └── init.sh            # Entry point script (launched by lessos-boot)
+└── LessUI.zip             # Extracted to LESSUI partition on first boot
+```
+
+### LESSUI Partition (exFAT, fills remaining space)
+```
+/lessui/
+├── LessUI                 # LessUI binary
+├── assets/                # LessUI assets
+├── Roms/                  # Game files
+├── Saves/                 # Save data
+└── Bios/                  # BIOS files
 ```
 
 ### External SD (optional, mounted at /storage2)
@@ -116,21 +127,21 @@ BASE_ONLY="true"           # Skip EmulationStation, themes, multimedia
 EMULATION_DEVICE="no"      # LessUI handles emulation
 ENABLE_32BIT="false"       # Not needed for LessUI
 WINDOWMANAGER="none"       # LessUI runs directly on framebuffer/DRM
-STORAGE_SIZE=4096          # Initial 4GB FAT32 (auto-resized on first boot)
+STORAGE_SIZE=512           # Fixed 512MB ext4 storage partition
 ```
 
-## FAT32 Storage Partition
+## Partition Layout
 
-LessOS uses FAT32 instead of ext4 for the storage partition:
+LessOS uses a three-partition layout:
 
-**Advantages:**
-- Directly readable on Windows/macOS/Linux without special drivers
-- Easy drag-and-drop file management
-- Auto-resizes to fill SD card on first boot
+1. **System (FAT32)**: Read-only boot partition with kernel and system image
+2. **Storage (ext4, 512MB)**: Config files, LessUI.zip, and init.sh
+3. **LESSUI (exFAT)**: Created on first boot, fills remaining space
 
-**Considerations:**
-- No filesystem-level permissions (everything is world-readable)
-- 4GB file size limit (FAT32 limitation)
+The exFAT LESSUI partition provides:
+- Cross-platform compatibility (readable on Windows/macOS/Linux)
+- No 4GB file size limit (unlike FAT32)
+- Storage for games, saves, and BIOS files
 
 ## Troubleshooting
 

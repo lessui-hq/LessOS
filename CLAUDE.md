@@ -27,11 +27,12 @@ make docker-shell
 
 ### Partition Layout
 - **Partition 1 (FAT32)**: Read-only system - kernel, squashfs system image, device trees
-- **Partition 2 (FAT32)**: User storage (`/storage`) - empty on first boot, auto-expanded to fill SD card
+- **Partition 2 (ext4)**: User storage (`/storage`) - 512MB fixed size, auto-expanded on first boot
+- **Partition 3 (exFAT)**: LESSUI partition - created on first boot, fills remaining space (TODO)
 - **External SD** (optional): Mounted at `/storage2` by `lessos-automount`
 
 ### Boot Flow
-1. First boot: `fs-resize` expands partition 2 to fill SD card, reboots
+1. First boot: `fs-resize` expands partition 2, creates partition 3 (LESSUI), extracts LessUI.zip (TODO)
 2. `lessos-automount.service` mounts external SD to `/storage2` (if present)
 3. `lessos-boot.service` searches for init.sh: `/storage2/lessos/` → `/storage/lessos/`
 4. Executes found `init.sh` → LessUI starts
@@ -39,7 +40,7 @@ make docker-shell
 ### Key Directories
 - `distributions/LessOS/` - Distribution config (options, version)
 - `projects/ROCKNIX/packages/lessos/` - Boot system package
-- `scripts/mkimage` - Image creation (handles FAT32 for LessOS)
+- `scripts/mkimage` - Image creation
 - `scripts/get_env` - Docker environment variable whitelist
 
 ## LessOS-Specific Packages
@@ -57,7 +58,7 @@ In `distributions/LessOS/options`:
 - `BASE_ONLY="true"` - Skip EmulationStation, themes, emulators
 - `EMULATION_DEVICE="no"` - LessUI handles emulation
 - `WINDOWMANAGER="none"` - Direct framebuffer/DRM
-- `STORAGE_SIZE=4096` - Initial 4GB FAT32 (auto-resized on first boot)
+- `STORAGE_SIZE=512` - Fixed 512MB ext4 storage partition
 
 ## On-Device Debugging
 
