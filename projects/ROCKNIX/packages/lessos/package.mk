@@ -11,13 +11,16 @@ PKG_LONGDESC="LessOS boot system - launches LessUI from lessos/init.sh"
 PKG_TOOLCHAIN="manual"
 
 makeinstall_target() {
-  # Install the boot script
+  # Install scripts
   mkdir -p ${INSTALL}/usr/bin
   cp ${PKG_DIR}/sources/lessos-boot ${INSTALL}/usr/bin/
+  cp ${PKG_DIR}/sources/lessos-automount ${INSTALL}/usr/bin/
   chmod 0755 ${INSTALL}/usr/bin/lessos-boot
+  chmod 0755 ${INSTALL}/usr/bin/lessos-automount
 }
 
 post_install() {
-  # Enable the LessOS boot service
+  # Enable LessOS services
+  enable_service lessos-automount.service
   enable_service lessos-boot.service
 }

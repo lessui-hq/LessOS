@@ -93,11 +93,10 @@ fi
 log "Environment: DEVICE=${LESSOS_DEVICE} PLATFORM=${LESSOS_PLATFORM} DISPLAY=${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}"
 
 # Paths to check for lessos/init.sh
-# Priority: SD2 (external) -> SD1 (internal) -> storage root
+# Priority: SD2 (external) -> SD1 (internal)
 # Each entry: "lessos_path:storage_root"
 LESSOS_PATHS=(
-  "/storage/games-external/lessos:/storage/games-external"
-  "/storage/games-internal/lessos:/storage/games-internal"
+  "/storage2/lessos:/storage2"
   "/storage/lessos:/storage"
 )
 
@@ -134,7 +133,7 @@ if [ -z "${INIT_SCRIPT}" ]; then
   echo "  - /storage/lessos/init.sh"
   echo ""
   echo "Or on external SD card:"
-  echo "  - /storage/games-external/lessos/init.sh"
+  echo "  - /storage2/lessos/init.sh"
   echo ""
 
   # Wait before retry

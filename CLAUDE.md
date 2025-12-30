@@ -27,12 +27,13 @@ make docker-shell
 
 ### Partition Layout
 - **Partition 1 (FAT32)**: Read-only system - kernel, squashfs system image, device trees
-- **Partition 2 (FAT32)**: User storage - empty on first boot, auto-expanded to fill SD card
+- **Partition 2 (FAT32)**: User storage (`/storage`) - empty on first boot, auto-expanded to fill SD card
+- **External SD** (optional): Mounted at `/storage2` by `lessos-automount`
 
 ### Boot Flow
 1. First boot: `fs-resize` expands partition 2 to fill SD card, reboots
-2. `lessos-boot.service` starts after storage mounts
-3. Searches for init.sh: SD2 external → SD1 internal → `/storage/lessos/`
+2. `lessos-automount.service` mounts external SD to `/storage2` (if present)
+3. `lessos-boot.service` searches for init.sh: `/storage2/lessos/` → `/storage/lessos/`
 4. Executes found `init.sh` → LessUI starts
 
 ### Key Directories
@@ -44,7 +45,11 @@ make docker-shell
 ## LessOS-Specific Packages
 
 ### lessos
-Boot system: `lessos-boot` script finds and executes `init.sh`. Includes systemd service and profile override for `UI_SERVICE`.
+Boot system with two scripts:
+- `lessos-automount` - mounts external SD card to `/storage2`
+- `lessos-boot` - finds and executes `init.sh` from `/storage2/lessos/` or `/storage/lessos/`
+
+Includes systemd services and profile override for `UI_SERVICE`.
 
 ## Key Configuration
 
@@ -57,10 +62,12 @@ In `distributions/LessOS/options`:
 ## On-Device Debugging
 
 ```bash
-# Boot log
+# Boot logs
 cat /var/log/lessos-boot.log
+cat /var/log/lessos-automount.log
 
 # Service status
+journalctl -u lessos-automount.service
 journalctl -u lessos-boot.service
 
 # Test init.sh manually
