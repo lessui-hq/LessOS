@@ -135,10 +135,13 @@ if [ -z "${INIT_SCRIPT}" ]; then
   echo "Or on external SD card:"
   echo "  - /storage2/lessos/init.sh"
   echo ""
+  echo "Shutting down in 5 seconds..."
+  echo ""
 
-  # Wait before retry
-  sleep 10
-  exit 1
+  sleep 5
+  log "Shutting down - no init.sh found"
+  /usr/sbin/poweroff
+  exit 0
 fi
 
 # Change to the lessos directory and export the path
