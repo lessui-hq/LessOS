@@ -48,7 +48,3 @@ projects/**/*.old
 /.env
 /.es_cache
 /.config
-
-# LessOS storage payload (contents managed externally)
-distributions/LessOS/storage-payload/*
-!distributions/LessOS/storage-payload/.gitkeep

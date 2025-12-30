@@ -27,7 +27,7 @@ make docker-shell
 
 ### Partition Layout
 - **Partition 1 (FAT32)**: Read-only system - kernel, squashfs system image, device trees
-- **Partition 2 (FAT32)**: User storage - `lessos/init.sh`, LessUI, Roms/, Saves/, Bios/
+- **Partition 2 (FAT32)**: User storage - empty on first boot, auto-expanded to fill SD card
 
 ### Boot Flow
 1. First boot: `fs-resize` expands partition 2 to fill SD card, reboots
@@ -35,13 +35,10 @@ make docker-shell
 3. Searches for init.sh: SD2 external → SD1 internal → `/storage/lessos/`
 4. Executes found `init.sh` → LessUI starts
 
-Note: Storage payload files are copied directly to the FAT32 partition during image build (no first-boot extraction).
-
 ### Key Directories
 - `distributions/LessOS/` - Distribution config (options, version)
 - `projects/ROCKNIX/packages/lessos/` - Boot system package
-- `distributions/LessOS/storage-payload/` - Files copied to storage partition during build
-- `scripts/mkimage` - Image creation (handles FAT32 for LessOS, copies storage payload)
+- `scripts/mkimage` - Image creation (handles FAT32 for LessOS)
 - `scripts/get_env` - Docker environment variable whitelist
 
 ## LessOS-Specific Packages

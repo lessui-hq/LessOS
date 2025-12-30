@@ -117,22 +117,6 @@ if [ "${DISTRO}" = "LessOS" ]; then
   touch "${IMG_TMP}/.please_resize_me"
   mcopy -i "${IMG_TMP}/part2.fat" -o "${IMG_TMP}/.please_resize_me" :: >"${SAVE_ERROR}" 2>&1 || show_error
 
-  # copy storage payload if directory exists
-  STORAGE_PAYLOAD_DIR="${ROOT}/distributions/${DISTRO}/storage-payload"
-  if [ -d "${STORAGE_PAYLOAD_DIR}" ]; then
-    echo "image: copying storage payload to part2..."
-    # copy all files and directories from payload
-    for item in "${STORAGE_PAYLOAD_DIR}"/*; do
-      if [ -e "${item}" ]; then
-        echo "  copying ${item##*/}..."
-        mcopy -i "${IMG_TMP}/part2.fat" -s -o "${item}" :: >"${SAVE_ERROR}" 2>&1 || show_error
-      fi
-    done
-    sync
-  else
-    echo "image: WARNING - no storage payload directory at ${STORAGE_PAYLOAD_DIR}"
-  fi
-
   # verify filesystem
   echo "image: checking filesystem on part2..."
   fsck.fat -n "${IMG_TMP}/part2.fat" >"${SAVE_ERROR}" 2>&1 || show_error
