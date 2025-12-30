@@ -10,8 +10,8 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 ┌──────────────────────────────────────────────────────────┐
 │                        Device                            │
 ├─────────────────────────────┬────────────────────────────┤
-│      Partition 1 (FAT)      │    Partition 2 (exFAT)     │
-│         System/Boot         │         Storage            │
+│      Partition 1 (FAT32)    │    Partition 2 (FAT32)     │
+│         System/Boot         │     Storage (/storage)     │
 ├─────────────────────────────┼────────────────────────────┤
 │  - Linux kernel             │  - lessos/init.sh          │
 │  - System image (squashfs)  │  - LessUI binary & assets  │
@@ -19,6 +19,7 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 │                             │  - Saves/                  │
 │                             │  - Bios/                   │
 └─────────────────────────────┴────────────────────────────┘
+          Optional: External SD mounted at /storage2
 ```
 
 ### Key Differences from ROCKNIX
@@ -26,7 +27,7 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 | Feature | ROCKNIX | LessOS |
 |---------|---------|--------|
 | Package count | ~410 | ~217 |
-| Storage filesystem | ext4 | exFAT |
+| Storage filesystem | ext4 | FAT32 |
 | Frontend | EmulationStation | LessUI |
 | 32-bit support | Yes | No |
 | Emulator packages | Built-in | None (handled by LessUI) |
@@ -37,14 +38,13 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 ```
 1. Device powers on
    │
-2. lessos-boot.service starts (after storage mounted)
+2. First boot: fs-resize expands partition 2 to fill SD card, reboots
    │
-3. First boot only: copy staged files from /usr/share/lessui → /storage
+3. lessos-automount.service mounts external SD to /storage2 (if present)
    │
-4. Search for init.sh in priority order:
-   │  ├─ /storage/games-external/lessos/init.sh  (SD2 - external card)
-   │  ├─ /storage/games-internal/lessos/init.sh  (SD1 - internal)
-   │  └─ /storage/lessos/init.sh                 (fallback)
+4. lessos-boot.service searches for init.sh:
+   │  ├─ /storage2/lessos/init.sh  (external SD card)
+   │  └─ /storage/lessos/init.sh   (internal storage)
    │
 5. Execute init.sh → LessUI starts
 ```
@@ -52,26 +52,32 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 ### SD Card Priority
 
 LessOS checks for `lessos/init.sh` in multiple locations, allowing you to:
-- **Boot from external SD**: Place LessUI on a removable SD card for easy updates
-- **Boot from internal storage**: Default fallback when no external card is present
+- **Boot from external SD**: Place LessUI on a removable SD card at `/storage2/lessos/`
+- **Boot from internal storage**: Default fallback at `/storage/lessos/`
 
 ## Directory Structure
 
 ### System Partition (read-only)
 ```
+/usr/bin/lessos-automount  # Mounts external SD to /storage2
 /usr/bin/lessos-boot       # Boot script that launches init.sh
-/usr/share/lessui/         # Staged LessUI files (copied to storage on first boot)
 ```
 
-### Storage Partition (exFAT, user-accessible)
+### Storage Partition (FAT32, user-accessible)
 ```
 /storage/
+└── lessos/
+    └── init.sh            # Entry point script (launched by lessos-boot)
+```
+
+### External SD (optional, mounted at /storage2)
+```
+/storage2/
 ├── lessos/
-│   └── init.sh            # Entry point script (launched by lessos-boot)
+│   └── init.sh            # Alternative boot location (takes priority)
 ├── Roms/                  # Game files
 ├── Saves/                 # Save data
-├── Bios/                  # BIOS files
-└── .lessui-installed      # Marker file (indicates first-boot copy complete)
+└── Bios/                  # BIOS files
 ```
 
 ## Building LessOS
@@ -84,20 +90,11 @@ Same as ROCKNIX - Docker is recommended for a consistent build environment.
 
 ```bash
 # Build for RK3566 devices (RGB30, RK2023, etc.)
-make LessOS-RK3566
+make docker-LessOS-RK3566
 
 # Build all LessOS targets
 make LessOS-world
 ```
-
-### Providing LessUI Files
-
-The build will look for LessUI source files at `~/Code/LessUI-v0.2.0`. To customize:
-
-1. Edit `projects/ROCKNIX/packages/lessui/package.mk`
-2. Change the `LESSUI_SRC` variable to your LessUI location
-
-If LessUI files are not found, a placeholder `init.sh` is created that displays a message asking the user to install LessUI manually.
 
 ## Packages
 
@@ -105,17 +102,10 @@ If LessUI files are not found, a placeholder `init.sh` is created that displays 
 `projects/ROCKNIX/packages/lessos/`
 
 The boot system package containing:
+- `lessos-automount` script that mounts external SD to `/storage2`
 - `lessos-boot` script that finds and executes init.sh
-- `lessos-boot.service` systemd unit
+- Systemd services for both scripts
 - Profile script that sets `UI_SERVICE=lessos-boot.service`
-
-### lessui
-`projects/ROCKNIX/packages/lessui/`
-
-Stages LessUI files during build:
-- Copies LessUI files to `/usr/share/lessui/` in the system image
-- Creates the `lessos/init.sh` entry point
-- Files are copied to storage on first boot
 
 ## Configuration
 
@@ -126,43 +116,43 @@ BASE_ONLY="true"           # Skip EmulationStation, themes, multimedia
 EMULATION_DEVICE="no"      # LessUI handles emulation
 ENABLE_32BIT="false"       # Not needed for LessUI
 WINDOWMANAGER="none"       # LessUI runs directly on framebuffer/DRM
-STORAGE_SIZE=4096          # 4GB exFAT partition (doesn't auto-resize)
+STORAGE_SIZE=4096          # Initial 4GB FAT32 (auto-resized on first boot)
 ```
 
-## exFAT Storage Partition
+## FAT32 Storage Partition
 
-LessOS uses exFAT instead of ext4 for the storage partition:
+LessOS uses FAT32 instead of ext4 for the storage partition:
 
 **Advantages:**
 - Directly readable on Windows/macOS/Linux without special drivers
 - Easy drag-and-drop file management
-- No Linux filesystem permissions
+- Auto-resizes to fill SD card on first boot
 
 **Considerations:**
-- No auto-resize on first boot (fixed 4GB default)
 - No filesystem-level permissions (everything is world-readable)
+- 4GB file size limit (FAT32 limitation)
 
 ## Troubleshooting
 
 ### "No init.sh found" error
 
 The boot script couldn't find `lessos/init.sh`. Ensure:
-1. LessUI files are in `/storage/lessos/` on the device
+1. LessUI files are in `/storage/lessos/` or `/storage2/lessos/` on the device
 2. The `init.sh` script exists and is executable
 3. Check `/var/log/lessos-boot.log` for details
 
-### First boot doesn't copy files
+### External SD not mounting
 
-Check if `/storage/.lessui-installed` exists. If it does but files are missing:
+Check the automount log:
 ```bash
-rm /storage/.lessui-installed
-reboot
+cat /var/log/lessos-automount.log
 ```
 
 ## Development
 
 ### Logs
 - Boot log: `/var/log/lessos-boot.log`
+- Automount log: `/var/log/lessos-automount.log`
 - System journal: `journalctl -u lessos-boot.service`
 
 ### Testing init.sh manually
@@ -175,5 +165,5 @@ systemctl stop lessos-boot
 ```bash
 # Clean the lessos package and rebuild
 DISTRO=LessOS PROJECT=ROCKNIX DEVICE=RK3566 ARCH=aarch64 ./scripts/clean lessos
-make LessOS-RK3566
+make docker-LessOS-RK3566
 ```
