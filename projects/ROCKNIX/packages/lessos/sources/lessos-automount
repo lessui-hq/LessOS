@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0
 # Copyright (C) 2024 LessOS
 #
-# Simple automount for external SD card to /storage2
+# Simple automount for external SD card to /sd2
 # Finds the first available external SD card and mounts it
 
 . /etc/profile
@@ -23,7 +23,7 @@ for MODULE in exfat vfat ntfs ntfs3; do
 done
 
 # Create mount point
-mkdir -p /storage2
+mkdir -p /sd2
 
 # Find external SD card
 # Look for partitions on devices that aren't the boot device
@@ -65,8 +65,8 @@ for DEV in $(lsblk -ln -o NAME,TYPE | awk '$2=="part" {print "/dev/"$1}'); do
       ;;
   esac
 
-  if mount ${MOUNT_OPTS} "${DEV}" /storage2 2>>"${LOG}"; then
-    log "Mounted ${DEV} to /storage2"
+  if mount ${MOUNT_OPTS} "${DEV}" /sd2 2>>"${LOG}"; then
+    log "Mounted ${DEV} to /sd2"
     exit 0
   else
     log "Failed to mount ${DEV}"

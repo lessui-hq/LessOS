@@ -27,15 +27,16 @@ make docker-shell
 
 ### Partition Layout
 - **Partition 1 (FAT32)**: Read-only system - kernel, squashfs system image, device trees
-- **Partition 2 (ext4)**: User storage (`/storage`) - 512MB fixed size, auto-expanded on first boot
-- **Partition 3 (exFAT)**: LESSUI partition - created on first boot, fills remaining space (TODO)
-- **External SD** (optional): Mounted at `/storage2` by `lessos-automount`
+- **Partition 2 (ext4)**: User storage (`/storage`) - 512MB, auto-expanded on first boot
+- **Partition 3 (exFAT)**: LESSUI partition (`/storage/lessui`) - created by lessos-boot, fills remaining space
+- **External SD** (optional): Mounted at `/sd2` by `lessos-automount`
 
 ### Boot Flow
-1. First boot: `fs-resize` expands partition 2, creates partition 3 (LESSUI), extracts LessUI.zip (TODO)
-2. `lessos-automount.service` mounts external SD to `/storage2` (if present)
-3. `lessos-boot.service` searches for init.sh: `/storage2/lessos/` → `/storage/lessos/`
-4. Executes found `init.sh` → LessUI starts
+1. First boot: `fs-resize` expands partition 2, reboots
+2. `lessos-automount.service` mounts external SD to `/sd2` (if present)
+3. `lessos-boot.service` creates partition 3 if missing, mounts at `/storage/lessui`, extracts LessUI.zip
+4. `lessos-boot.service` searches for init.sh: `/sd2/lessos/` → `/storage/lessos/`
+5. Executes found `init.sh` → LessUI starts
 
 ### Key Directories
 - `distributions/LessOS/` - Distribution config (options, version)
@@ -47,8 +48,8 @@ make docker-shell
 
 ### lessos
 Boot system with two scripts:
-- `lessos-automount` - mounts external SD card to `/storage2`
-- `lessos-boot` - finds and executes `init.sh` from `/storage2/lessos/` or `/storage/lessos/`
+- `lessos-automount` - mounts external SD card to `/sd2`
+- `lessos-boot` - creates LESSUI partition, finds and executes `init.sh` from `/sd2/lessos/` or `/storage/lessos/`
 
 Includes systemd services and profile override for `UI_SERVICE`.
 
@@ -74,7 +75,4 @@ journalctl -u lessos-boot.service
 # Test init.sh manually
 systemctl stop lessos-boot
 /storage/lessos/init.sh
-
-# Re-trigger partition resize (will reformat storage!)
-touch /storage/.please_resize_me && reboot
 ```

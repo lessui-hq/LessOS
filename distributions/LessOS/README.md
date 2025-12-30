@@ -11,14 +11,14 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 │                                   Device                                     │
 ├─────────────────────────┬──────────────────────┬────────────────────────────┤
 │   Partition 1 (FAT32)   │  Partition 2 (ext4)  │    Partition 3 (exFAT)     │
-│       System/Boot       │  Storage (/storage)  │     LESSUI (/lessui)       │
+│       System/Boot       │  Storage (/storage)  │  LESSUI (/storage/lessui)  │
 ├─────────────────────────┼──────────────────────┼────────────────────────────┤
 │  - Linux kernel         │  - Config files      │  - LessUI binary & assets  │
 │  - System image         │  - LessUI.zip        │  - Roms/                   │
 │  - Device trees         │  - lessos/init.sh    │  - Saves/                  │
 │                         │                      │  - Bios/                   │
 └─────────────────────────┴──────────────────────┴────────────────────────────┘
-          Optional: External SD mounted at /storage2
+                    Optional: External SD mounted at /sd2
 ```
 
 ### Key Differences from ROCKNIX
@@ -37,29 +37,31 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 ```
 1. Device powers on
    │
-2. First boot: fs-resize expands partition 2, creates partition 3 (LESSUI),
-   │            extracts LessUI.zip to LESSUI partition, reboots
+2. First boot: fs-resize expands partition 2, reboots
    │
-3. lessos-automount.service mounts external SD to /storage2 (if present)
+3. lessos-automount.service mounts external SD to /sd2 (if present)
    │
-4. lessos-boot.service searches for init.sh:
-   │  ├─ /storage2/lessos/init.sh  (external SD card)
+4. lessos-boot.service creates partition 3 if missing, mounts at /storage/lessui
+   │  └─ If /storage/LessUI.zip exists, extracts it to /storage/lessui
+   │
+5. lessos-boot.service searches for init.sh:
+   │  ├─ /sd2/lessos/init.sh  (external SD card)
    │  └─ /storage/lessos/init.sh   (internal storage)
    │
-5. Execute init.sh → LessUI starts
+6. Execute init.sh → LessUI starts
 ```
 
 ### SD Card Priority
 
 LessOS checks for `lessos/init.sh` in multiple locations, allowing you to:
-- **Boot from external SD**: Place LessUI on a removable SD card at `/storage2/lessos/`
+- **Boot from external SD**: Place LessUI on a removable SD card at `/sd2/lessos/`
 - **Boot from internal storage**: Default fallback at `/storage/lessos/`
 
 ## Directory Structure
 
 ### System Partition (read-only)
 ```
-/usr/bin/lessos-automount  # Mounts external SD to /storage2
+/usr/bin/lessos-automount  # Mounts external SD to /sd2
 /usr/bin/lessos-boot       # Boot script that launches init.sh
 ```
 
@@ -73,7 +75,7 @@ LessOS checks for `lessos/init.sh` in multiple locations, allowing you to:
 
 ### LESSUI Partition (exFAT, fills remaining space)
 ```
-/lessui/
+/storage/lessui/
 ├── LessUI                 # LessUI binary
 ├── assets/                # LessUI assets
 ├── Roms/                  # Game files
@@ -81,9 +83,9 @@ LessOS checks for `lessos/init.sh` in multiple locations, allowing you to:
 └── Bios/                  # BIOS files
 ```
 
-### External SD (optional, mounted at /storage2)
+### External SD (optional, mounted at /sd2)
 ```
-/storage2/
+/sd2/
 ├── lessos/
 │   └── init.sh            # Alternative boot location (takes priority)
 ├── Roms/                  # Game files
@@ -113,7 +115,7 @@ make LessOS-world
 `projects/ROCKNIX/packages/lessos/`
 
 The boot system package containing:
-- `lessos-automount` script that mounts external SD to `/storage2`
+- `lessos-automount` script that mounts external SD to `/sd2`
 - `lessos-boot` script that finds and executes init.sh
 - Systemd services for both scripts
 - Profile script that sets `UI_SERVICE=lessos-boot.service`
@@ -148,7 +150,7 @@ The exFAT LESSUI partition provides:
 ### "No init.sh found" error
 
 The boot script couldn't find `lessos/init.sh`. Ensure:
-1. LessUI files are in `/storage/lessos/` or `/storage2/lessos/` on the device
+1. LessUI files are in `/storage/lessos/` or `/sd2/lessos/` on the device
 2. The `init.sh` script exists and is executable
 3. Check `/var/log/lessos-boot.log` for details
 
