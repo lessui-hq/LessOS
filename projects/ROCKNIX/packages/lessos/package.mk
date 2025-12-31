@@ -18,10 +18,16 @@ makeinstall_target() {
   chmod 0755 ${INSTALL}/usr/bin/lessos-boot
   chmod 0755 ${INSTALL}/usr/bin/lessos-automount
 
-  # Install autostart script (runs during boot with splash visible)
+  # Install autostart scripts (run during boot with splash visible)
   mkdir -p ${INSTALL}/usr/lib/autostart/common
   cp ${PKG_DIR}/autostart/050-lessos ${INSTALL}/usr/lib/autostart/common/
+  cp ${PKG_DIR}/autostart/099-lessos-overrides ${INSTALL}/usr/lib/autostart/common/
   chmod 0755 ${INSTALL}/usr/lib/autostart/common/050-lessos
+  chmod 0755 ${INSTALL}/usr/lib/autostart/common/099-lessos-overrides
+
+  # Configure logind to ignore power/lid buttons (LessUI handles them)
+  mkdir -p ${INSTALL}/usr/lib/systemd/logind.conf.d
+  cp ${PKG_DIR}/config/logind-lessos.conf ${INSTALL}/usr/lib/systemd/logind.conf.d/
 }
 
 post_install() {
