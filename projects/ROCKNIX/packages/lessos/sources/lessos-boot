@@ -3,7 +3,7 @@
 # Copyright (C) 2024 LessOS
 #
 # LessOS boot script - finds and executes init.sh from lessos folder
-# Checks /sd2 (external) first, then falls back to /storage (internal)
+# Checks /sd2 (external) first, then falls back to /storage/lessui (LESSUI partition)
 #
 # Environment variables available to init.sh:
 #   LESSOS_DEVICE      - Specific device model (e.g., "Anbernic RG353P")
@@ -33,6 +33,35 @@ status() {
 }
 
 status "LessOS boot starting..."
+
+# ---------------------------------------------------------
+# Extract LessUI archives
+# ---------------------------------------------------------
+extract_lessui_archives() {
+  # Extract LessUI.zip from /storage to /storage/lessui
+  if [ -f "/storage/LessUI.zip" ]; then
+    status "Extracting LessUI.zip..."
+    log "Extracting /storage/LessUI.zip to /storage/lessui"
+    if 7za x -o/storage/lessui -y "/storage/LessUI.zip" >/dev/null 2>&1; then
+      rm -f "/storage/LessUI.zip"
+      log "LessUI.zip extracted and deleted"
+    else
+      log "Warning: Failed to extract LessUI.zip"
+    fi
+  fi
+
+  # Extract LessUI.7z in place on LESSUI partition
+  if [ -f "/storage/lessui/LessUI.7z" ]; then
+    status "Extracting LessUI.7z..."
+    log "Extracting /storage/lessui/LessUI.7z in place"
+    if 7za x -o/storage/lessui -y "/storage/lessui/LessUI.7z" >/dev/null 2>&1; then
+      rm -f "/storage/lessui/LessUI.7z"
+      log "LessUI.7z extracted and deleted"
+    else
+      log "Warning: Failed to extract LessUI.7z"
+    fi
+  fi
+}
 
 # ---------------------------------------------------------
 # Set up LESSUI partition (partition 3) if it doesn't exist
@@ -67,17 +96,28 @@ setup_lessui_partition() {
       ;;
   esac
 
+  log "Disk: ${disk}, Part3: ${part3}"
+
   # Check if partition 3 already exists
   if [ -b "${part3}" ]; then
+    log "Partition 3 exists"
     # Mount it if not already mounted
     if ! mountpoint -q /storage/lessui 2>/dev/null; then
       mkdir -p /storage/lessui
       if ! mount -t exfat "${part3}" /storage/lessui 2>/dev/null; then
         log "Warning: Failed to mount LESSUI partition ${part3}"
+      else
+        log "Mounted ${part3} at /storage/lessui"
       fi
+    else
+      log "/storage/lessui already mounted"
     fi
+    # Extract any pending archives
+    extract_lessui_archives
     return 0
   fi
+
+  log "Partition 3 does not exist, creating..."
 
   # Partition 3 doesn't exist - create it
   status "Creating LESSUI partition..."
@@ -127,16 +167,8 @@ setup_lessui_partition() {
 
   log "LESSUI partition created at ${part3}"
 
-  # Extract LessUI.zip if present
-  if [ -f "/storage/LessUI.zip" ]; then
-    status "Extracting LessUI.zip..."
-    if 7z x -o/storage/lessui -y "/storage/LessUI.zip" >/dev/null 2>&1; then
-      rm -f "/storage/LessUI.zip"
-      log "LessUI.zip extracted to /storage/lessui"
-    else
-      log "Warning: Failed to extract LessUI.zip"
-    fi
-  fi
+  # Extract any pending archives
+  extract_lessui_archives
 
   return 0
 }
@@ -203,11 +235,11 @@ fi
 log "Environment: DEVICE=${LESSOS_DEVICE} PLATFORM=${LESSOS_PLATFORM} DISPLAY=${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}"
 
 # Paths to check for lessos/init.sh
-# Priority: /sd2 (external) -> /storage (internal)
+# Priority: /sd2 (external) -> /storage/lessui (LESSUI partition)
 # Each entry: "lessos_path:storage_root"
 LESSOS_PATHS=(
   "/sd2/lessos:/sd2"
-  "/storage/lessos:/storage"
+  "/storage/lessui/lessos:/storage/lessui"
 )
 
 INIT_SCRIPT=""
@@ -240,10 +272,10 @@ if [ -z "${INIT_SCRIPT}" ]; then
   echo "=========================================="
   echo ""
   echo "Please place LessUI with lessos/init.sh in:"
-  echo "  - /storage/lessos/init.sh"
+  echo "  - LESSUI partition: lessos/init.sh"
   echo ""
   echo "Or on external SD card:"
-  echo "  - /sd2/lessos/init.sh"
+  echo "  - lessos/init.sh"
   echo ""
   echo "Shutting down in 5 seconds..."
   echo ""
