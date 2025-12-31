@@ -3,8 +3,7 @@
 
 [Unit]
 Description=LessOS Boot Service
-After=lessos-automount.service
-Requires=lessos-automount.service
+After=rocknix-autostart.service
 
 [Service]
 Type=simple

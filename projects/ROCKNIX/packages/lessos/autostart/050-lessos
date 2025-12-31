@@ -1,0 +1,213 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+#
+# LessOS autostart script - mounts external SD, sets up LESSUI partition, extracts archives
+# Runs during boot with splash screen visible
+
+. /etc/profile
+
+BOOTLOG="/var/log/lessos-boot.log"
+
+log() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S'): $*" >> "${BOOTLOG}"
+}
+
+# ---------------------------------------------------------
+# Mount external SD card to /sd2
+# ---------------------------------------------------------
+mount_external_sd() {
+  tocon "Checking for external SD..."
+
+  # Load filesystem modules
+  for MODULE in exfat vfat ntfs ntfs3; do
+    modprobe "${MODULE}" 2>/dev/null || true
+  done
+
+  # Create mount point
+  mkdir -p /sd2
+
+  # Find external SD card (partition on device that isn't the boot device)
+  local BOOT_DEV
+  BOOT_DEV=$(grep "/flash " /proc/mounts | cut -d" " -f1 | sed -e 's#p[0-9]*$##' -e 's#[0-9]*$##')
+  log "Boot device: ${BOOT_DEV}"
+
+  for DEV in $(lsblk -ln -o NAME,TYPE | awk '$2=="part" {print "/dev/"$1}'); do
+    local BASE_DEV
+    BASE_DEV=$(echo "${DEV}" | sed -e 's#p[0-9]*$##' -e 's#[0-9]*$##')
+
+    # Skip boot device
+    [ "${BASE_DEV}" = "${BOOT_DEV}" ] && continue
+
+    # Skip if already mounted
+    grep -q "^${DEV} " /proc/mounts && continue
+
+    # Skip small partitions (< 1GB)
+    local SIZE
+    SIZE=$(lsblk -bln -o SIZE "${DEV}" 2>/dev/null)
+    [ -n "${SIZE}" ] && [ "${SIZE}" -lt 1073741824 ] && continue
+
+    # Try to mount
+    local FSTYPE MOUNT_OPTS=""
+    FSTYPE=$(blkid -o value -s TYPE "${DEV}" 2>/dev/null)
+    log "Found external: ${DEV} (${FSTYPE})"
+
+    case "${FSTYPE}" in
+      vfat|exfat) MOUNT_OPTS="-o uid=0,gid=0,umask=000" ;;
+      ntfs) MOUNT_OPTS="-t ntfs3" ;;
+    esac
+
+    if mount ${MOUNT_OPTS} "${DEV}" /sd2 2>/dev/null; then
+      log "Mounted ${DEV} to /sd2"
+      return 0
+    fi
+  done
+
+  log "No external SD card found"
+  return 0
+}
+
+# ---------------------------------------------------------
+# Extract LessUI archives
+# ---------------------------------------------------------
+extract_lessui_archives() {
+  # Extract LessUI.zip from /storage to /storage/lessui
+  if [ -f "/storage/LessUI.zip" ]; then
+    tocon "Extracting LessUI.zip..."
+    log "Extracting /storage/LessUI.zip to /storage/lessui"
+    if 7za x -o/storage/lessui -y "/storage/LessUI.zip" >/dev/null 2>&1; then
+      rm -f "/storage/LessUI.zip"
+      log "LessUI.zip extracted and deleted"
+    else
+      log "Warning: Failed to extract LessUI.zip"
+    fi
+  fi
+
+  # Extract LessUI.7z in place on LESSUI partition
+  if [ -f "/storage/lessui/LessUI.7z" ]; then
+    tocon "Installing LessUI..."
+    log "Extracting /storage/lessui/LessUI.7z in place"
+    if 7za x -o/storage/lessui -y "/storage/lessui/LessUI.7z" >/dev/null 2>&1; then
+      rm -f "/storage/lessui/LessUI.7z"
+      log "LessUI.7z extracted and deleted"
+    else
+      log "Warning: Failed to extract LessUI.7z"
+    fi
+  fi
+}
+
+# ---------------------------------------------------------
+# Set up LESSUI partition (partition 3)
+# ---------------------------------------------------------
+setup_lessui_partition() {
+  tocon "Setting up LESSUI partition..."
+
+  # Load exfat module
+  modprobe exfat 2>/dev/null || true
+
+  # Get the disk from /storage mount
+  local storage_part
+  storage_part=$(grep " /storage " /proc/mounts | cut -d" " -f1)
+  if [ -z "${storage_part}" ]; then
+    log "Warning: Could not determine storage partition"
+    return 1
+  fi
+
+  # Determine disk and partition naming scheme
+  local disk part3
+  case "${storage_part}" in
+    /dev/mmcblk*p[0-9]*)
+      disk="${storage_part%p*}"
+      part3="${disk}p3"
+      ;;
+    /dev/nvme*p[0-9]*)
+      disk="${storage_part%p*}"
+      part3="${disk}p3"
+      ;;
+    *)
+      # For /dev/sda2, /dev/sda12, etc - strip all trailing digits
+      disk=$(echo "${storage_part}" | sed 's/[0-9]*$//')
+      part3="${disk}3"
+      ;;
+  esac
+
+  log "Disk: ${disk}, Part3: ${part3}"
+
+  # Check if partition 3 already exists
+  if [ -b "${part3}" ]; then
+    log "Partition 3 exists"
+    # Mount it if not already mounted
+    if ! mountpoint -q /storage/lessui 2>/dev/null; then
+      mkdir -p /storage/lessui
+      if ! mount -t exfat "${part3}" /storage/lessui 2>/dev/null; then
+        log "Warning: Failed to mount LESSUI partition ${part3}"
+      else
+        log "Mounted ${part3} at /storage/lessui"
+      fi
+    else
+      log "/storage/lessui already mounted"
+    fi
+    # Extract any pending archives
+    extract_lessui_archives
+    return 0
+  fi
+
+  log "Partition 3 does not exist, creating..."
+  tocon "Creating LESSUI partition..."
+
+  # Get the end of partition 2
+  local part2_end
+  part2_end=$(parted -s -m "${disk}" unit s print 2>/dev/null | grep "^2:" | cut -d: -f3 | tr -d 's')
+  if [ -z "${part2_end}" ]; then
+    log "Error: Could not determine partition 2 end"
+    return 1
+  fi
+
+  local part3_start=$((part2_end + 1))
+
+  # Create partition 3 using remaining space
+  if ! parted -s "${disk}" mkpart primary "${part3_start}s" 100% 2>/dev/null; then
+    log "Error: Failed to create partition 3"
+    return 1
+  fi
+
+  # Wait for partition to appear
+  partprobe "${disk}" 2>/dev/null || true
+  udevadm settle --timeout=5 2>/dev/null || sleep 2
+
+  if [ ! -b "${part3}" ]; then
+    log "Error: Partition 3 not found after creation"
+    return 1
+  fi
+
+  # Set partition type to 0x07 (exFAT/NTFS) so Windows recognizes it
+  sfdisk --part-type "${disk}" 3 7 >/dev/null 2>&1 || true
+  partprobe "${disk}" 2>/dev/null || true
+
+  # Format as exFAT
+  tocon "Formatting LESSUI partition..."
+  if ! mkfs.exfat -n "LESSUI" "${part3}" >/dev/null 2>&1; then
+    log "Error: Failed to format partition 3 as exFAT"
+    return 1
+  fi
+
+  # Mount the new partition
+  mkdir -p /storage/lessui
+  if ! mount -t exfat "${part3}" /storage/lessui 2>/dev/null; then
+    log "Error: Failed to mount LESSUI partition"
+    return 1
+  fi
+
+  log "LESSUI partition created at ${part3}"
+
+  # Extract any pending archives
+  extract_lessui_archives
+
+  return 0
+}
+
+# Mount external SD first (for /sd2)
+mount_external_sd
+
+# Set up LESSUI partition and extract archives
+setup_lessui_partition

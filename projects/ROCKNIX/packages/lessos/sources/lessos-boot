@@ -26,155 +26,7 @@ log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S'): $*" >> "${BOOTLOG}"
 }
 
-# Show status message on console
-status() {
-  echo "==> $*"
-  log "$*"
-}
-
-status "LessOS boot starting..."
-
-# ---------------------------------------------------------
-# Extract LessUI archives
-# ---------------------------------------------------------
-extract_lessui_archives() {
-  # Extract LessUI.zip from /storage to /storage/lessui
-  if [ -f "/storage/LessUI.zip" ]; then
-    status "Extracting LessUI.zip..."
-    log "Extracting /storage/LessUI.zip to /storage/lessui"
-    if 7za x -o/storage/lessui -y "/storage/LessUI.zip" >/dev/null 2>&1; then
-      rm -f "/storage/LessUI.zip"
-      log "LessUI.zip extracted and deleted"
-    else
-      log "Warning: Failed to extract LessUI.zip"
-    fi
-  fi
-
-  # Extract LessUI.7z in place on LESSUI partition
-  if [ -f "/storage/lessui/LessUI.7z" ]; then
-    status "Extracting LessUI.7z..."
-    log "Extracting /storage/lessui/LessUI.7z in place"
-    if 7za x -o/storage/lessui -y "/storage/lessui/LessUI.7z" >/dev/null 2>&1; then
-      rm -f "/storage/lessui/LessUI.7z"
-      log "LessUI.7z extracted and deleted"
-    else
-      log "Warning: Failed to extract LessUI.7z"
-    fi
-  fi
-}
-
-# ---------------------------------------------------------
-# Set up LESSUI partition (partition 3) if it doesn't exist
-# ---------------------------------------------------------
-setup_lessui_partition() {
-  # Load exfat module
-  modprobe exfat 2>/dev/null || true
-
-  # Get the disk from /storage mount
-  local storage_part
-  storage_part=$(grep " /storage " /proc/mounts | cut -d" " -f1)
-  if [ -z "${storage_part}" ]; then
-    log "Warning: Could not determine storage partition"
-    return 1
-  fi
-
-  # Determine disk and partition naming scheme
-  local disk part3
-  case "${storage_part}" in
-    /dev/mmcblk*p[0-9]*)
-      disk="${storage_part%p*}"
-      part3="${disk}p3"
-      ;;
-    /dev/nvme*p[0-9]*)
-      disk="${storage_part%p*}"
-      part3="${disk}p3"
-      ;;
-    *)
-      # For /dev/sda2, /dev/sda12, etc - strip all trailing digits
-      disk=$(echo "${storage_part}" | sed 's/[0-9]*$//')
-      part3="${disk}3"
-      ;;
-  esac
-
-  log "Disk: ${disk}, Part3: ${part3}"
-
-  # Check if partition 3 already exists
-  if [ -b "${part3}" ]; then
-    log "Partition 3 exists"
-    # Mount it if not already mounted
-    if ! mountpoint -q /storage/lessui 2>/dev/null; then
-      mkdir -p /storage/lessui
-      if ! mount -t exfat "${part3}" /storage/lessui 2>/dev/null; then
-        log "Warning: Failed to mount LESSUI partition ${part3}"
-      else
-        log "Mounted ${part3} at /storage/lessui"
-      fi
-    else
-      log "/storage/lessui already mounted"
-    fi
-    # Extract any pending archives
-    extract_lessui_archives
-    return 0
-  fi
-
-  log "Partition 3 does not exist, creating..."
-
-  # Partition 3 doesn't exist - create it
-  status "Creating LESSUI partition..."
-
-  # Get the end of partition 2
-  local part2_end
-  part2_end=$(parted -s -m "${disk}" unit s print 2>/dev/null | grep "^2:" | cut -d: -f3 | tr -d 's')
-  if [ -z "${part2_end}" ]; then
-    log "Error: Could not determine partition 2 end"
-    return 1
-  fi
-
-  local part3_start=$((part2_end + 1))
-
-  # Create partition 3 using remaining space
-  if ! parted -s "${disk}" mkpart primary "${part3_start}s" 100% 2>/dev/null; then
-    log "Error: Failed to create partition 3"
-    return 1
-  fi
-
-  # Wait for partition to appear
-  partprobe "${disk}" 2>/dev/null || true
-  udevadm settle --timeout=5 2>/dev/null || sleep 2
-
-  if [ ! -b "${part3}" ]; then
-    log "Error: Partition 3 not found after creation"
-    return 1
-  fi
-
-  # Set partition type to 0x07 (exFAT/NTFS) so Windows recognizes it
-  sfdisk --part-type "${disk}" 3 7 >/dev/null 2>&1 || true
-  partprobe "${disk}" 2>/dev/null || true
-
-  # Format as exFAT
-  status "Formatting LESSUI partition..."
-  if ! mkfs.exfat -n "LESSUI" "${part3}" >/dev/null 2>&1; then
-    log "Error: Failed to format partition 3 as exFAT"
-    return 1
-  fi
-
-  # Mount the new partition
-  mkdir -p /storage/lessui
-  if ! mount -t exfat "${part3}" /storage/lessui 2>/dev/null; then
-    log "Error: Failed to mount LESSUI partition"
-    return 1
-  fi
-
-  log "LESSUI partition created at ${part3}"
-
-  # Extract any pending archives
-  extract_lessui_archives
-
-  return 0
-}
-
-# Run partition setup
-setup_lessui_partition
+log "LessOS boot starting..."
 
 # ---------------------------------------------------------
 # Set up environment variables for init.sh
@@ -185,9 +37,8 @@ export LESSOS_DEVICE="${QUIRK_DEVICE}"
 export LESSOS_PLATFORM="${HW_DEVICE}"
 export LESSOS_ARCH="${HW_ARCH}"
 export LESSOS_VERSION="${OS_VERSION}"
-# LESSOS_STORAGE is set later based on where init.sh is found
 
-status "Device: ${LESSOS_DEVICE} (${LESSOS_PLATFORM})"
+log "Device: ${LESSOS_DEVICE} (${LESSOS_PLATFORM})"
 
 # Get display info from framebuffer
 if [ -e "/sys/class/graphics/fb0/virtual_size" ]; then
@@ -210,10 +61,8 @@ fi
 export DISPLAY_ROTATION
 
 # Load device-specific quirks if available (provides DEVICE_* variables)
-# Quirk 001-* scripts write to /storage/.config/profile.d/001-device_config
 QUIRK_DIR="/usr/lib/autostart/quirks/devices/${QUIRK_DEVICE}"
 if [ -d "${QUIRK_DIR}" ]; then
-  # Use nullglob to avoid iterating over literal pattern if no matches
   shopt -s nullglob
   for quirk in "${QUIRK_DIR}"/001-*; do
     log "Running device quirk: ${quirk}"
@@ -223,10 +72,8 @@ if [ -d "${QUIRK_DIR}" ]; then
 fi
 
 # Source device config if it exists (sets DEVICE_* variables)
-# Then export all DEVICE_* variables for init.sh
 if [ -f "/storage/.config/profile.d/001-device_config" ]; then
   . /storage/.config/profile.d/001-device_config
-  # Export all DEVICE_* variables
   for var in $(compgen -v | grep ^DEVICE_); do
     export "${var?}"
   done
@@ -234,9 +81,12 @@ fi
 
 log "Environment: DEVICE=${LESSOS_DEVICE} PLATFORM=${LESSOS_PLATFORM} DISPLAY=${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}"
 
+# ---------------------------------------------------------
+# Find and execute init.sh
+# ---------------------------------------------------------
+
 # Paths to check for lessos/init.sh
 # Priority: /sd2 (external) -> /storage/lessui (LESSUI partition)
-# Each entry: "lessos_path:storage_root"
 LESSOS_PATHS=(
   "/sd2/lessos:/sd2"
   "/storage/lessui/lessos:/storage/lessui"
@@ -244,8 +94,7 @@ LESSOS_PATHS=(
 
 INIT_SCRIPT=""
 
-# Find the first available init.sh
-status "Looking for init.sh..."
+log "Looking for init.sh..."
 for entry in "${LESSOS_PATHS[@]}"; do
   path="${entry%%:*}"
   storage="${entry##*:}"
@@ -253,7 +102,7 @@ for entry in "${LESSOS_PATHS[@]}"; do
   if [ -f "${path}/init.sh" ]; then
     INIT_SCRIPT="${path}/init.sh"
     export LESSOS_STORAGE="${storage}"
-    status "Found: ${path}/init.sh"
+    log "Found: ${path}/init.sh"
     break
   fi
 done
@@ -266,19 +115,21 @@ if [ -z "${INIT_SCRIPT}" ]; then
   done
 
   # Show error on console/display
-  echo ""
-  echo "=========================================="
-  echo "  LessOS: No init.sh found!"
-  echo "=========================================="
-  echo ""
-  echo "Please place LessUI with lessos/init.sh in:"
-  echo "  - LESSUI partition: lessos/init.sh"
-  echo ""
-  echo "Or on external SD card:"
-  echo "  - lessos/init.sh"
-  echo ""
-  echo "Shutting down in 5 seconds..."
-  echo ""
+  {
+    echo ""
+    echo "=========================================="
+    echo "  LessOS: No init.sh found!"
+    echo "=========================================="
+    echo ""
+    echo "Please place LessUI with lessos/init.sh in:"
+    echo "  - LESSUI partition: lessos/init.sh"
+    echo ""
+    echo "Or on external SD card:"
+    echo "  - lessos/init.sh"
+    echo ""
+    echo "Shutting down in 5 seconds..."
+    echo ""
+  } > /dev/console
 
   sleep 5
   log "Shutting down - no init.sh found"
@@ -300,11 +151,9 @@ if [ ! -x "${INIT_SCRIPT}" ]; then
   chmod +x "${INIT_SCRIPT}" 2>/dev/null || true
 fi
 
-status "Launching LessUI..."
-log "Executing ${INIT_SCRIPT}"
-# shellcheck disable=SC2093  # exec is intentional - replaces this process with init.sh
+log "Launching LessUI from ${INIT_SCRIPT}"
 exec "${INIT_SCRIPT}"
 
-# If exec fails (e.g., bad shebang), we end up here
+# If exec fails, we end up here
 log "ERROR: exec failed for ${INIT_SCRIPT}"
 exit 1
