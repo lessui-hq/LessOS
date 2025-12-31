@@ -8,7 +8,7 @@ PKG_VERSION="2.39.2"
 PKG_LICENSE="GPL"
 PKG_URL="https://www.kernel.org/pub/linux/utils/util-linux/v$(get_pkg_version_maj_min)/${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_DEPENDS_HOST="ccache:host autoconf:host automake:host intltool:host libtool:host pkg-config:host"
-PKG_DEPENDS_TARGET="toolchain ncurses"
+PKG_DEPENDS_TARGET="toolchain"
 PKG_DEPENDS_INIT="toolchain"
 PKG_LONGDESC="A large variety of low-level system utilities that are necessary for a Linux system to function."
 PKG_TOOLCHAIN="autotools"
@@ -46,13 +46,10 @@ UTILLINUX_CONFIG_DEFAULT="--disable-gtk-doc \
                           --without-systemdsystemunitdir"
 
 PKG_CONFIGURE_OPTS_TARGET="${UTILLINUX_CONFIG_DEFAULT} \
-                           --with-ncursesw \
                            --enable-libuuid \
                            --enable-libblkid \
                            --enable-libmount \
                            --enable-libsmartcols \
-                           --enable-libfdisk \
-                           --enable-fdisks \
                            --enable-losetup \
                            --enable-fsck \
                            --enable-fstrim \
@@ -60,6 +57,12 @@ PKG_CONFIGURE_OPTS_TARGET="${UTILLINUX_CONFIG_DEFAULT} \
                            --enable-blkdiscard \
                            --enable-schedutils \
                            --enable-lscpu"
+
+# Enable fdisk support (for runtime partition management)
+if [ "${UTIL_LINUX_FDISK}" = "yes" ]; then
+  PKG_DEPENDS_TARGET+=" ncurses"
+  PKG_CONFIGURE_OPTS_TARGET+=" --with-ncursesw --enable-libfdisk --enable-fdisks"
+fi
 
 if [ "${SWAP_SUPPORT}" = "yes" ]; then
   PKG_CONFIGURE_OPTS_TARGET+=" --enable-swapon"

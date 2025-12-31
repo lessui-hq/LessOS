@@ -189,6 +189,13 @@
 # Default supported get handlers (archive, git, file etc.)
   GET_HANDLER_SUPPORT="archive git file"
 
+# LessOS-specific build options (used by patches)
+# Enable fdisk in util-linux for partition management
+  UTIL_LINUX_FDISK="yes"
+
+# Boot system package to include
+  BOOT_PACKAGE="lessos"
+
 # Partition labels for USB/SD installation media
   DISTRO_BOOTLABEL="LESSOS"
   DISTRO_DISKLABEL="STORAGE"

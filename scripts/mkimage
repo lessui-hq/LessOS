@@ -100,7 +100,7 @@ tune2fs -L "${DISTRO_DISKLABEL}" -U ${UUID_STORAGE} "${IMG_TMP}/part2.ext4" >"${
 e2fsck -n "${IMG_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
 sync
 
-# add resize mark (skip for LessOS - partition 3 needs the space)
+# add resize mark (LessOS uses fixed partition 2, creates partition 3 at runtime)
 mkdir "${IMG_TMP}/part2.fs"
 if [ "${DISTRO}" != "LessOS" ]; then
   touch "${IMG_TMP}/part2.fs/.please_resize_me"

@@ -102,8 +102,8 @@ fi
 # modules packages
 [ "${MODULES_PKG}" = "yes" ] && PKG_DEPENDS_TARGET+=" modules"
 
-# LessOS support - boot package
-[ "${DISTRO}" = "LessOS" ] && PKG_DEPENDS_TARGET+=" lessos"
+# Custom boot package support
+[ -n "${BOOT_PACKAGE}" ] && PKG_DEPENDS_TARGET+=" ${BOOT_PACKAGE}"
 
 # Entware support
 mkdir -p ${INSTALL}
