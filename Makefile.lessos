@@ -6,7 +6,11 @@ LessOS-RK3566:
 	unset DEVICE_ROOT
 	DISTRO=LessOS PROJECT=ROCKNIX DEVICE=RK3566 ARCH=aarch64 ./scripts/build_distro
 
-LessOS-world: LessOS-RK3566
+LessOS-SM8250:
+	unset DEVICE_ROOT
+	DISTRO=LessOS PROJECT=ROCKNIX DEVICE=SM8250 ARCH=aarch64 ./scripts/build_distro
+
+LessOS-world: LessOS-RK3566 LessOS-SM8250
 
 # Docker builds - use clean environment (no host env pollution)
 # These explicit targets override the generic docker-% pattern
