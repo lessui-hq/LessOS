@@ -11,23 +11,19 @@ PKG_LONGDESC="LessOS boot system - launches LessUI from lessos/init.sh"
 PKG_TOOLCHAIN="manual"
 
 makeinstall_target() {
-  # Install boot script
+  # Install boot scripts
   mkdir -p ${INSTALL}/usr/bin
   cp ${PKG_DIR}/sources/lessos-boot ${INSTALL}/usr/bin/
   cp ${PKG_DIR}/sources/lessos-automount ${INSTALL}/usr/bin/
   chmod 0755 ${INSTALL}/usr/bin/lessos-boot
   chmod 0755 ${INSTALL}/usr/bin/lessos-automount
 
-  # Install autostart scripts (run during boot with splash visible)
-  mkdir -p ${INSTALL}/usr/lib/autostart/common
-  cp ${PKG_DIR}/autostart/050-lessos ${INSTALL}/usr/lib/autostart/common/
-  cp ${PKG_DIR}/autostart/099-lessos-overrides ${INSTALL}/usr/lib/autostart/common/
-  chmod 0755 ${INSTALL}/usr/lib/autostart/common/050-lessos
-  chmod 0755 ${INSTALL}/usr/lib/autostart/common/099-lessos-overrides
-
   # Configure logind to ignore power/lid buttons (LessUI handles them)
   mkdir -p ${INSTALL}/usr/lib/systemd/logind.conf.d
   cp ${PKG_DIR}/config/logind-lessos.conf ${INSTALL}/usr/lib/systemd/logind.conf.d/
+
+  # Note: autostart/, profile.d/, system.d/ subdirectories
+  # are auto-installed by scripts/install
 }
 
 post_install() {

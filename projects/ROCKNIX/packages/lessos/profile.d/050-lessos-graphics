@@ -1,0 +1,12 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+#
+# Graphics environment for LessOS
+# LessUI uses direct KMS/DRM without a Wayland compositor
+
+# Force SDL2 to use KMS/DRM video driver (no compositor)
+export SDL_VIDEODRIVER=kmsdrm
+
+# Use PulseAudio for audio
+export SDL_AUDIODRIVER=pulseaudio

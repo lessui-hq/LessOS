@@ -38,6 +38,10 @@ then
   EMULATION_DEVICE=no
   ENABLE_32BIT=no
   PKG_DEPENDS_TARGET+=" ${PKG_TOOLS} ${PKG_FONTS}"
+  # Device-specific packages (libmali, gpudriver, etc.) are still needed for BASE_ONLY
+  [ -n "${ADDITIONAL_PACKAGES}" ] && PKG_DEPENDS_TARGET+=" ${ADDITIONAL_PACKAGES}"
+  # Sound support
+  [ "${PIPEWIRE_SUPPORT}" = "yes" ] && PKG_DEPENDS_TARGET+=" alsa pulseaudio pipewire wireplumber"
 else
   PKG_DEPENDS_TARGET+=" ${PKG_TOOLS} ${PKG_FONTS} ${PKG_SOUND} ${PKG_SYNC} ${PKG_GRAPHICS} ${PKG_UI} ${PKG_UI_TOOLS} ${PKG_MULTIMEDIA} misc-packages"
 
