@@ -161,6 +161,76 @@ cat /var/log/lessos-automount.log
 
 ## Development
 
+### Branching Strategy
+
+LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution). We maintain two branches:
+
+```
+next     ← Synced with upstream ROCKNIX
+  ↓
+lessos   ← LessOS development (default branch)
+```
+
+- **`next`**: Tracks upstream ROCKNIX. Periodically synced with `ROCKNIX/distribution:next`.
+- **`lessos`**: All LessOS-specific changes. This is the default branch.
+
+### Syncing with Upstream
+
+First-time setup (add ROCKNIX as upstream remote):
+
+```bash
+git remote add upstream https://github.com/ROCKNIX/distribution.git
+```
+
+When ROCKNIX makes a release or significant updates:
+
+```bash
+# Fetch upstream changes
+git fetch upstream next
+git checkout next
+git merge upstream/next
+git push origin next
+
+# Merge into lessos
+git checkout lessos
+git merge next
+# Resolve any conflicts, test, push
+git push origin lessos
+```
+
+### Reviewing Fork Changes
+
+To see what LessOS changes vs upstream ROCKNIX:
+
+```bash
+git log next..lessos --oneline     # Commits
+git diff next..lessos --stat       # File summary
+git diff next..lessos --name-only  # File list
+```
+
+### Releases
+
+LessOS releases are aligned with ROCKNIX releases to benefit from their testing. We use date-based tags matching ROCKNIX's format:
+
+```bash
+# Tag a release (format: YYYYMMDD)
+git checkout lessos
+git tag -a 20250102 -m "LessOS 20250102"
+git push origin 20250102
+```
+
+When to release:
+- After merging a new ROCKNIX release into `lessos`
+- After significant LessOS-specific fixes or features
+
+### Version File
+
+The `version` file controls the OS version shown in the system. Update `OS_VERSION` for major changes:
+
+```bash
+OS_VERSION="1.0"  # Increment for breaking changes
+```
+
 ### Logs
 - Boot log: `/var/log/lessos-boot.log`
 - Automount log: `/var/log/lessos-automount.log`
