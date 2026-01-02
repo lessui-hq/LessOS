@@ -13,6 +13,9 @@ int main(void) {
     const char *fb_device = "/dev/fb0";
     const char *logo_path = "/usr/share/lessos/lessos.png";
 
+    // Get rotation from device tree
+    int rotation = get_display_rotation();
+
     // Check framebuffer device accessibility
     if (access(fb_device, R_OK | W_OK) != 0) {
         fprintf(stderr, "Cannot access %s: %s\n", fb_device, strerror(errno));
@@ -42,8 +45,21 @@ int main(void) {
         }
     }
 
+    // Get framebuffer dimensions
+    uint32_t fb_width = fb->vinfo.xres;
+    uint32_t fb_height = fb->vinfo.yres;
+
+    // For 90/270 degree rotation, swap the logical screen dimensions
+    // when calculating image size and centering
+    uint32_t screen_width = fb_width;
+    uint32_t screen_height = fb_height;
+    if (rotation == 90 || rotation == 270) {
+        screen_width = fb_height;
+        screen_height = fb_width;
+    }
+
     // Calculate scaling to use max 30% screen width
-    float max_width = fb->vinfo.xres * 0.3f;
+    float max_width = screen_width * 0.3f;
     float scale = max_width / width;
 
     // Don't scale up, only down
@@ -52,9 +68,9 @@ int main(void) {
     int scaled_width = (int)(width * scale);
     int scaled_height = (int)(height * scale);
 
-    // Calculate centering offsets
-    int offset_x = (fb->vinfo.xres - scaled_width) / 2;
-    int offset_y = (fb->vinfo.yres - scaled_height) / 2;
+    // Calculate centering offsets in logical screen space
+    int offset_x = (screen_width - scaled_width) / 2;
+    int offset_y = (screen_height - scaled_height) / 2;
 
     // Draw scaled PNG to framebuffer using nearest-neighbor
     for (int y = 0; y < scaled_height; y++) {
@@ -68,10 +84,34 @@ int main(void) {
             unsigned char *pixel = img + (src_y * width + src_x) * 3;
             uint32_t color = (pixel[0] << 16) | (pixel[1] << 8) | pixel[2];
 
-            int dst_x = x + offset_x;
-            int dst_y = y + offset_y;
-            if (dst_x < (int)fb->vinfo.xres && dst_y < (int)fb->vinfo.yres) {
-                set_pixel(fb, dst_x, dst_y, color);
+            // Calculate logical destination coordinates
+            int logical_x = x + offset_x;
+            int logical_y = y + offset_y;
+
+            // Transform to framebuffer coordinates based on rotation
+            int fb_x, fb_y;
+            switch (rotation) {
+                case 90:
+                    fb_x = fb_width - 1 - logical_y;
+                    fb_y = logical_x;
+                    break;
+                case 180:
+                    fb_x = fb_width - 1 - logical_x;
+                    fb_y = fb_height - 1 - logical_y;
+                    break;
+                case 270:
+                    fb_x = logical_y;
+                    fb_y = fb_height - 1 - logical_x;
+                    break;
+                default: // 0 degrees
+                    fb_x = logical_x;
+                    fb_y = logical_y;
+                    break;
+            }
+
+            if (fb_x >= 0 && fb_x < (int)fb_width &&
+                fb_y >= 0 && fb_y < (int)fb_height) {
+                set_pixel(fb, fb_x, fb_y, color);
             }
         }
     }
