@@ -4,7 +4,7 @@
 [Unit]
 Description=LessOS External SD Automount
 After=storage.mount
-Before=lessos-boot.service
+Before=autostart.service
 
 [Service]
 Type=oneshot

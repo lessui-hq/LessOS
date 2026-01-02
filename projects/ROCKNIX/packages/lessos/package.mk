@@ -27,6 +27,7 @@ makeinstall_target() {
 }
 
 post_install() {
-  # Enable LessOS boot service (autostart script handles SD mounting and partition setup)
+  # Enable LessOS services
+  enable_service lessos-automount.service
   enable_service lessos-boot.service
 }

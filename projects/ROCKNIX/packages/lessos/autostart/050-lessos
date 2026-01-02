@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-2.0
 # Copyright (C) 2024 LessOS
 #
-# LessOS autostart script - mounts external SD, sets up LESSUI partition, extracts archives
-# Runs during boot with splash screen visible
+# LessOS autostart script - sets up LESSUI partition and extracts archives
+# Note: /sd2 is already mounted by lessos-automount.service
 
 . /etc/profile
 
@@ -11,60 +11,6 @@ BOOTLOG="/var/log/lessos-boot.log"
 
 log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S'): $*" >> "${BOOTLOG}"
-}
-
-# ---------------------------------------------------------
-# Mount external SD card to /sd2
-# ---------------------------------------------------------
-mount_external_sd() {
-  tocon "Checking for external SD..."
-
-  # Load filesystem modules
-  for MODULE in exfat vfat ntfs ntfs3; do
-    modprobe "${MODULE}" 2>/dev/null || true
-  done
-
-  # Create mount point
-  mkdir -p /sd2
-
-  # Find external SD card (partition on device that isn't the boot device)
-  local BOOT_DEV
-  BOOT_DEV=$(grep "/flash " /proc/mounts | cut -d" " -f1 | sed -e 's#p[0-9]*$##' -e 's#[0-9]*$##')
-  log "Boot device: ${BOOT_DEV}"
-
-  for DEV in $(lsblk -ln -o NAME,TYPE | awk '$2=="part" {print "/dev/"$1}'); do
-    local BASE_DEV
-    BASE_DEV=$(echo "${DEV}" | sed -e 's#p[0-9]*$##' -e 's#[0-9]*$##')
-
-    # Skip boot device
-    [ "${BASE_DEV}" = "${BOOT_DEV}" ] && continue
-
-    # Skip if already mounted
-    grep -q "^${DEV} " /proc/mounts && continue
-
-    # Skip small partitions (< 1GB)
-    local SIZE
-    SIZE=$(lsblk -bln -o SIZE "${DEV}" 2>/dev/null)
-    [ -n "${SIZE}" ] && [ "${SIZE}" -lt 1073741824 ] && continue
-
-    # Try to mount
-    local FSTYPE MOUNT_OPTS=""
-    FSTYPE=$(blkid -o value -s TYPE "${DEV}" 2>/dev/null)
-    log "Found external: ${DEV} (${FSTYPE})"
-
-    case "${FSTYPE}" in
-      vfat|exfat) MOUNT_OPTS="-o uid=0,gid=0,umask=000" ;;
-      ntfs) MOUNT_OPTS="-t ntfs3" ;;
-    esac
-
-    if mount ${MOUNT_OPTS} "${DEV}" /sd2 2>/dev/null; then
-      log "Mounted ${DEV} to /sd2"
-      return 0
-    fi
-  done
-
-  log "No external SD card found"
-  return 0
 }
 
 # ---------------------------------------------------------
@@ -193,9 +139,6 @@ setup_lessui_partition() {
 
   return 0
 }
-
-# Mount external SD first (for /sd2)
-mount_external_sd
 
 # Set up LESSUI partition and extract archives
 setup_lessui_partition
