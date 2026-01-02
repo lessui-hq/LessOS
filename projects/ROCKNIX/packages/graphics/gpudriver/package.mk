@@ -13,7 +13,7 @@ PKG_LONGDESC="GPU driver util for switching between panfrost / panthor and libma
 post_makeinstall_target() {
   mkdir -p "${INSTALL}/usr/bin/"
   cp -v "${PKG_BUILD}/bin/gpudriver" "${INSTALL}/usr/bin/"
-
+  
   # set the correct mesa pan kernel driver module based on device
   case ${DEVICE} in
     RK3588)

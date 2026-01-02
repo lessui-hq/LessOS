@@ -29,4 +29,6 @@ make_init() {
 makeinstall_init() {
   mkdir -p ${INSTALL}/usr/bin
   cp lessos-splash ${INSTALL}/usr/bin/
+  # Symlink so upstream init script works unchanged
+  ln -sf lessos-splash ${INSTALL}/usr/bin/rocknix-splash
 }

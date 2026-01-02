@@ -36,6 +36,5 @@ else
   nohup systemctl stop batteryledstatus &
 fi
 
-# LessOS: disabled - LessUI handles input
-#tocon "Starting input service..."
-#nohup systemctl start input &
+tocon "Starting input service..."
+nohup systemctl start input &

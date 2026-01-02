@@ -6,3 +6,6 @@
 
 # LessUI handles power management
 systemctl stop powerstate 2>/dev/null || true
+
+# LessUI handles input (stop service started by 098-deviceutils)
+systemctl stop input 2>/dev/null || true

@@ -186,10 +186,16 @@
 # Fixed size - third partition (LESSUI) will be created on first boot
   STORAGE_SIZE=512
 
+# Skip storage partition auto-resize (LessOS creates partition 3 at runtime instead)
+  SKIP_STORAGE_RESIZE="yes"
+
 # Default supported get handlers (archive, git, file etc.)
   GET_HANDLER_SUPPORT="archive git file"
 
 # LessOS-specific build options (used by patches)
+# Splash screen package for initramfs
+  SPLASH_PACKAGE="lessos-splash"
+
 # Enable fdisk in util-linux for partition management
   UTIL_LINUX_FDISK="yes"
 
