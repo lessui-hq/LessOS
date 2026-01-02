@@ -6,7 +6,11 @@ PKG_VERSION="1.0.0"
 PKG_LICENSE="GPL-2.0"
 PKG_SITE="https://github.com/shauninman/LessOS"
 PKG_URL=""
-PKG_DEPENDS_TARGET="toolchain SDL2 SDL2_image SDL2_ttf SDL2_mixer parted"
+# Dependencies:
+#   - SDL2, SDL2_image, SDL2_ttf, SDL2_mixer: Runtime libraries required by LessUI
+#   - parted: Used by 050-lessos autostart to create partition 3
+#   - p7zip: Provides 7za for extracting LessUI.zip
+PKG_DEPENDS_TARGET="toolchain SDL2 SDL2_image SDL2_ttf SDL2_mixer parted p7zip"
 PKG_LONGDESC="LessOS boot system - launches LessUI from lessos/init.sh"
 PKG_TOOLCHAIN="manual"
 
