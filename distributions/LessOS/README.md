@@ -37,25 +37,23 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 ```
 1. Device powers on
    │
-2. First boot: fs-resize expands partition 2, reboots
+2. lessos-automount.service mounts external SD to /sd2 (if present)
    │
-3. lessos-automount.service mounts external SD to /sd2 (if present)
-   │
-4. lessos-boot.service creates partition 3 if missing, mounts at /storage/lessui
+3. 050-lessos (autostart) creates partition 3 if missing, mounts at /storage/lessui
    │  └─ If /storage/LessUI.zip exists, extracts it to /storage/lessui
    │
-5. lessos-boot.service searches for init.sh:
+4. lessos-boot.service searches for init.sh:
    │  ├─ /sd2/lessos/init.sh  (external SD card)
-   │  └─ /storage/lessos/init.sh   (internal storage)
+   │  └─ /storage/lessui/lessos/init.sh   (LESSUI partition)
    │
-6. Execute init.sh → LessUI starts
+5. Execute init.sh → LessUI starts
 ```
 
 ### SD Card Priority
 
 LessOS checks for `lessos/init.sh` in multiple locations, allowing you to:
 - **Boot from external SD**: Place LessUI on a removable SD card at `/sd2/lessos/`
-- **Boot from internal storage**: Default fallback at `/storage/lessos/`
+- **Boot from internal storage**: Default fallback at `/storage/lessui/lessos/`
 
 ## Directory Structure
 
@@ -150,7 +148,7 @@ The exFAT LESSUI partition provides:
 ### "No init.sh found" error
 
 The boot script couldn't find `lessos/init.sh`. Ensure:
-1. LessUI files are in `/storage/lessos/` or `/sd2/lessos/` on the device
+1. LessUI files are in `/storage/lessui/lessos/` or `/sd2/lessos/` on the device
 2. The `init.sh` script exists and is executable
 3. Check `/var/log/lessos-boot.log` for details
 
@@ -171,7 +169,7 @@ cat /var/log/lessos-automount.log
 ### Testing init.sh manually
 ```bash
 systemctl stop lessos-boot
-/storage/lessos/init.sh
+/storage/lessui/lessos/init.sh
 ```
 
 ### Rebuilding after changes
