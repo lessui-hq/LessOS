@@ -82,18 +82,6 @@ extract_lessui_archives() {
       log "Warning: Failed to extract LessUI.zip"
     fi
   fi
-
-  # Extract LessUI.7z in place on LESSUI partition
-  if [ -f "/storage/lessui/LessUI.7z" ]; then
-    tocon "Installing LessUI..."
-    log "Extracting /storage/lessui/LessUI.7z in place"
-    if 7za x -o/storage/lessui -y "/storage/lessui/LessUI.7z" >/dev/null 2>&1; then
-      rm -f "/storage/lessui/LessUI.7z"
-      log "LessUI.7z extracted and deleted"
-    else
-      log "Warning: Failed to extract LessUI.7z"
-    fi
-  fi
 }
 
 # ---------------------------------------------------------
