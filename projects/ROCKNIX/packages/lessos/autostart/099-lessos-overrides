@@ -1,0 +1,11 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+#
+# Stop ROCKNIX services that conflict with LessUI
+
+# LessUI handles power management
+systemctl stop powerstate 2>/dev/null || true
+
+# LessUI handles input (stop service started by 098-deviceutils)
+systemctl stop input 2>/dev/null || true

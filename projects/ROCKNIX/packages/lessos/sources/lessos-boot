@@ -1,0 +1,159 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+#
+# LessOS boot script - finds and executes init.sh from lessos folder
+# Checks /sd2 (external) first, then falls back to /storage/lessui (LESSUI partition)
+#
+# Environment variables available to init.sh:
+#   LESSOS_DEVICE      - Specific device model (e.g., "Anbernic RG353P")
+#   LESSOS_PLATFORM    - Device family/SoC (e.g., "RK3566")
+#   LESSOS_ARCH        - CPU architecture (e.g., "aarch64")
+#   LESSOS_VERSION     - OS version string
+#   LESSOS_DIR         - Path to the lessos directory containing init.sh
+#   LESSOS_STORAGE     - Storage root where Roms/, Saves/, etc. should be
+#                        (matches SD card where init.sh was found)
+#   DISPLAY_WIDTH      - Framebuffer width in pixels
+#   DISPLAY_HEIGHT     - Framebuffer height in pixels
+#   DISPLAY_ROTATION   - Framebuffer rotation (0, 1, 2, 3)
+#   Plus all variables from /etc/profile (HW_DEVICE, QUIRK_DEVICE, etc.)
+
+. /etc/profile
+
+BOOTLOG="/var/log/lessos-boot.log"
+
+log() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S'): $*" >> "${BOOTLOG}"
+}
+
+log "LessOS boot starting..."
+
+# ---------------------------------------------------------
+# Set up environment variables for init.sh
+# ---------------------------------------------------------
+
+# Core device info (from os-release and profile)
+export LESSOS_DEVICE="${QUIRK_DEVICE}"
+export LESSOS_PLATFORM="${HW_DEVICE}"
+export LESSOS_ARCH="${HW_ARCH}"
+export LESSOS_VERSION="${OS_VERSION}"
+
+log "Device: ${LESSOS_DEVICE} (${LESSOS_PLATFORM})"
+
+# Get display info from framebuffer
+if [ -e "/sys/class/graphics/fb0/virtual_size" ]; then
+  FB_SIZE=$(cat /sys/class/graphics/fb0/virtual_size 2>/dev/null)
+  # Format should be "WIDTH,HEIGHT" - validate before parsing
+  if [[ "${FB_SIZE}" =~ ^[0-9]+,[0-9]+$ ]]; then
+    export DISPLAY_WIDTH="${FB_SIZE%%,*}"
+    export DISPLAY_HEIGHT="${FB_SIZE##*,}"
+  else
+    log "Warning: Unexpected framebuffer size format: ${FB_SIZE}"
+  fi
+fi
+
+# Get display rotation
+if [ -e "/sys/devices/virtual/graphics/fbcon/rotate" ]; then
+  DISPLAY_ROTATION=$(cat /sys/devices/virtual/graphics/fbcon/rotate 2>/dev/null)
+else
+  DISPLAY_ROTATION=0
+fi
+export DISPLAY_ROTATION
+
+# Load device-specific quirks if available (provides DEVICE_* variables)
+QUIRK_DIR="/usr/lib/autostart/quirks/devices/${QUIRK_DEVICE}"
+if [ -d "${QUIRK_DIR}" ]; then
+  shopt -s nullglob
+  for quirk in "${QUIRK_DIR}"/001-*; do
+    log "Running device quirk: ${quirk}"
+    "${quirk}" 2>/dev/null || true
+  done
+  shopt -u nullglob
+fi
+
+# Source device config if it exists (sets DEVICE_* variables)
+if [ -f "/storage/.config/profile.d/001-device_config" ]; then
+  . /storage/.config/profile.d/001-device_config
+  for var in $(compgen -v | grep ^DEVICE_); do
+    export "${var?}"
+  done
+fi
+
+log "Environment: DEVICE=${LESSOS_DEVICE} PLATFORM=${LESSOS_PLATFORM} DISPLAY=${DISPLAY_WIDTH}x${DISPLAY_HEIGHT}"
+
+# ---------------------------------------------------------
+# Find and execute init.sh
+# ---------------------------------------------------------
+
+# Paths to check for lessos/init.sh
+# Priority: /sd2 (external) -> /storage/lessui (LESSUI partition)
+LESSOS_PATHS=(
+  "/sd2/lessos:/sd2"
+  "/storage/lessui/lessos:/storage/lessui"
+)
+
+INIT_SCRIPT=""
+
+log "Looking for init.sh..."
+for entry in "${LESSOS_PATHS[@]}"; do
+  path="${entry%%:*}"
+  storage="${entry##*:}"
+  log "Checking ${path}/init.sh..."
+  if [ -f "${path}/init.sh" ]; then
+    INIT_SCRIPT="${path}/init.sh"
+    export LESSOS_STORAGE="${storage}"
+    log "Found: ${path}/init.sh"
+    break
+  fi
+done
+
+if [ -z "${INIT_SCRIPT}" ]; then
+  log "ERROR: No init.sh found in any lessos folder"
+  log "Expected locations:"
+  for entry in "${LESSOS_PATHS[@]}"; do
+    log "  - ${entry%%:*}/init.sh"
+  done
+
+  # Show error on console/display
+  {
+    echo ""
+    echo "=========================================="
+    echo "  LessOS: No init.sh found!"
+    echo "=========================================="
+    echo ""
+    echo "Please place LessUI with lessos/init.sh in:"
+    echo "  - LESSUI partition: lessos/init.sh"
+    echo ""
+    echo "Or on external SD card:"
+    echo "  - lessos/init.sh"
+    echo ""
+    echo "Shutting down in 5 seconds..."
+    echo ""
+  } > /dev/console
+
+  sleep 5
+  log "Shutting down - no init.sh found"
+  /usr/sbin/poweroff
+  exit 0
+fi
+
+# Change to the lessos directory and export the path
+LESSOS_DIR="$(dirname "${INIT_SCRIPT}")"
+export LESSOS_DIR
+if ! cd "${LESSOS_DIR}"; then
+  log "ERROR: Failed to cd to ${LESSOS_DIR}"
+  exit 1
+fi
+
+# Ensure init.sh is executable
+if [ ! -x "${INIT_SCRIPT}" ]; then
+  log "Warning: ${INIT_SCRIPT} is not executable, adding permission"
+  chmod +x "${INIT_SCRIPT}" 2>/dev/null || true
+fi
+
+log "Launching LessUI from ${INIT_SCRIPT}"
+exec "${INIT_SCRIPT}"
+
+# If exec fails, we end up here
+log "ERROR: exec failed for ${INIT_SCRIPT}"
+exit 1

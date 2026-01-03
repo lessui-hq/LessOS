@@ -1,0 +1,77 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+#
+# Simple automount for external SD card to /sd2
+# Finds the first available external SD card and mounts it
+
+. /etc/profile
+
+LOG="/var/log/lessos-automount.log"
+
+log() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S'): $*" >> "${LOG}"
+}
+
+log "LessOS automount starting..."
+
+# Load filesystem modules
+for MODULE in exfat vfat ntfs ntfs3; do
+  if ! lsmod | grep -q "${MODULE}"; then
+    modprobe "${MODULE}" 2>/dev/null || true
+  fi
+done
+
+# Create mount point
+mkdir -p /sd2
+
+# Find external SD card
+# Look for partitions on devices that aren't the boot device
+BOOT_DEV=$(grep "/flash " /proc/mounts | cut -d" " -f1 | sed -e 's#p[0-9]*$##' -e 's#[0-9]*$##')
+log "Boot device: ${BOOT_DEV}"
+
+for DEV in $(lsblk -ln -o NAME,TYPE | awk '$2=="part" {print "/dev/"$1}'); do
+  # Skip if this is on the boot device
+  BASE_DEV=$(echo "${DEV}" | sed -e 's#p[0-9]*$##' -e 's#[0-9]*$##')
+  if [ "${BASE_DEV}" = "${BOOT_DEV}" ]; then
+    log "Skipping ${DEV} (boot device)"
+    continue
+  fi
+
+  # Skip if already mounted
+  if grep -q "^${DEV} " /proc/mounts; then
+    log "Skipping ${DEV} (already mounted)"
+    continue
+  fi
+
+  # Skip small partitions (< 1GB)
+  SIZE=$(lsblk -bln -o SIZE "${DEV}" 2>/dev/null)
+  if [ -n "${SIZE}" ] && [ "${SIZE}" -lt 1073741824 ]; then
+    log "Skipping ${DEV} (too small: ${SIZE} bytes)"
+    continue
+  fi
+
+  # Try to mount
+  FSTYPE=$(blkid -o value -s TYPE "${DEV}" 2>/dev/null)
+  log "Found ${DEV} (${FSTYPE})"
+
+  MOUNT_OPTS=""
+  case "${FSTYPE}" in
+    vfat|exfat)
+      MOUNT_OPTS="-o uid=0,gid=0,umask=000"
+      ;;
+    ntfs)
+      MOUNT_OPTS="-t ntfs3"
+      ;;
+  esac
+
+  if mount ${MOUNT_OPTS} "${DEV}" /sd2 2>>"${LOG}"; then
+    log "Mounted ${DEV} to /sd2"
+    exit 0
+  else
+    log "Failed to mount ${DEV}"
+  fi
+done
+
+log "No external SD card found"
+exit 0
