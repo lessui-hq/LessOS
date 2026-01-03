@@ -58,6 +58,12 @@ PKG_CONFIGURE_OPTS_TARGET="${UTILLINUX_CONFIG_DEFAULT} \
                            --enable-schedutils \
                            --enable-lscpu"
 
+# Enable fdisk support (for runtime partition management)
+if [ "${UTIL_LINUX_FDISK}" = "yes" ]; then
+  PKG_DEPENDS_TARGET+=" ncurses"
+  PKG_CONFIGURE_OPTS_TARGET+=" --with-ncursesw --enable-libfdisk --enable-fdisks"
+fi
+
 if [ "${SWAP_SUPPORT}" = "yes" ]; then
   PKG_CONFIGURE_OPTS_TARGET+=" --enable-swapon"
 fi
