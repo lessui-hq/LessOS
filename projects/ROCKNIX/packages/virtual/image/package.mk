@@ -40,6 +40,8 @@ then
   PKG_DEPENDS_TARGET+=" ${PKG_TOOLS} ${PKG_FONTS}"
   # Device-specific packages (libmali, gpudriver, etc.) are still needed for BASE_ONLY
   [ -n "${ADDITIONAL_PACKAGES}" ] && PKG_DEPENDS_TARGET+=" ${ADDITIONAL_PACKAGES}"
+  # Vulkan support
+  [ "${VULKAN_SUPPORT}" = "yes" ] && PKG_DEPENDS_TARGET+=" vulkan-loader"
   # Sound support
   [ "${PIPEWIRE_SUPPORT}" = "yes" ] && PKG_DEPENDS_TARGET+=" alsa pulseaudio pipewire wireplumber"
 else
