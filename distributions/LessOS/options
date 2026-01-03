@@ -1,0 +1,220 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+
+# LTO (Link Time Optimization) support
+  LTO_SUPPORT="yes"
+
+# GOLD (Google Linker) support
+  GOLD_SUPPORT="yes"
+
+# HARDENING (security relevant linker and compiler flags) support
+  HARDENING_SUPPORT="no"
+
+# The name of the parent organization for updates
+  GIT_ORGANIZATION="shauninman"
+
+# The name of the github project for updates
+  GIT_REPO="LessOS"
+
+# Name of the Distro to build (full name, without special characters)
+  DISTRONAME="LessOS"
+
+# Name of the OS to build (full name, lower case, without special characters)
+  OSNAME="lessos"
+
+# short project description
+  DESCRIPTION="A minimal launcher OS for LessUI"
+
+# Distribution Home URL
+  HOME_URL="https://github.com/shauninman/LessOS"
+
+# Documentation URL
+  WIKI_URL="https://github.com/shauninman/LessOS"
+
+# Where to report bugs
+  BUG_REPORT_URL="https://github.com/shauninman/LessOS/issues"
+
+# Root password to integrate in the target system
+  ROOT_PASSWORD="lessos"
+
+# Install glibc locales to the build (yes / no)
+  GLIBC_LOCALES="yes"
+
+# build and install pipewire support (yes / no)
+  PIPEWIRE_SUPPORT="yes"
+
+# Define package sets to clean based on the type of build being executed.
+  CLEAN_OS_BASE="lessos kernel-firmware"
+  CLEAN_NETWORK=""
+  CLEAN_EMU_32BIT=""
+  CLEAN_WESTON="libdisplay-info sway"
+
+# build and install rocknix joypad driver (yes / no)
+  ROCKNIX_JOYPAD="yes"
+
+# additional drivers to install:
+  ADDITIONAL_DRIVERS=""
+
+# build and install driver addons (yes / no)
+  DRIVER_ADDONS_SUPPORT="no"
+
+# driver addons to install:
+  DRIVER_ADDONS=""
+
+# Disable 32BIT support - not needed for LessUI
+  ENABLE_32BIT="false"
+
+# build and install bluetooth support (yes / no)
+  BLUETOOTH_SUPPORT="yes"
+
+# build and install Avahi (Zeroconf) daemon (yes / no)
+  AVAHI_DAEMON="no"
+
+# build with NFS support (mounting nfs shares via the OS) (yes / no)
+  NFS_SUPPORT="no"
+
+# build and install Samba Client support (mounting samba shares via the OS) (yes / no)
+  SAMBA_SUPPORT="no"
+
+# build and install Samba Server (yes / no)
+  SAMBA_SERVER="no"
+
+# build and install SFTP Server (yes / no)
+  SFTP_SERVER="yes"
+
+# build and install Simple HTTP Server (yes / no)
+  SIMPLE_HTTP_SERVER="no"
+
+# build and install OpenVPN support (yes / no)
+  OPENVPN_SUPPORT="no"
+
+# build and install ZeroTier support (yes / no)
+  ZEROTIER_SUPPORT="no"
+
+# build and install WireGuard support (yes / no)
+  WIREGUARD_SUPPORT="no"
+
+# build and install diskmounter support (udevil)
+  UDEVIL="yes"
+
+# build and install exFAT fuse support (yes / no)
+  EXFAT="yes"
+
+# build and install NTFS-3G fuse support (yes / no)
+  NTFS3G="no"
+
+# build and install hfs filesystem utilities (yes / no)
+  HFSTOOLS="no"
+
+# Target an emulation device - NO for LessOS (LessUI handles this)
+  EMULATION_DEVICE="no"
+
+# Base only build - skip EmulationStation, themes, multimedia packages
+  BASE_ONLY="true"
+
+# Add support for containers
+  CONTAINER_SUPPORT="no"
+
+# Build modules packages - NO for LessOS
+  MODULES_PKG="no"
+
+# Support for debug tools such as strace
+  DEBUG_PACKAGES="no"
+
+# Windowmanager to use (weston / swaywm-env / no)
+  WINDOWMANAGER="none"
+
+# Xorg Graphic drivers to use
+  GRAPHIC_DRIVERS=""
+
+# build and install remote support (yes / no)
+  REMOTE_SUPPORT="no"
+
+# build and install Joystick support (yes / no)
+  JOYSTICK_SUPPORT="yes"
+
+# Support for partitioning and formating disks in initramfs (yes / no)
+  INITRAMFS_PARTED_SUPPORT="yes"
+
+# build with swap support (yes / no)
+  SWAP_SUPPORT="yes"
+
+# swap support enabled per default (yes / no)
+  SWAP_ENABLED_DEFAULT="yes"
+
+# swap size if SWAP_SUPPORT=yes in MB
+  SWAPSIZE="384"
+
+# swap type if SWAP_SUPPORT=yes (file / zram)
+  SWAP_TYPE="zram"
+
+# Default weston terminal font size
+  WESTONFONTSIZE="14"
+
+# build with installer (yes / no)
+  INSTALLER_SUPPORT="no"
+
+# Testpackages for development (yes / no)
+  TESTING="no"
+
+# OEM packages for OEM's (yes / no)
+  OEM_SUPPORT="no"
+
+# build and install nano text editor (yes / no)
+  NANO_EDITOR="yes"
+
+# cron support (yes / no)
+  CRON_SUPPORT="no"
+
+# htop tool (yes / no)
+  HTOP_TOOL="no"
+
+# btop tool (yes / no)
+  BTOP_TOOL="no"
+
+# Distribution Specific source location
+  DISTRO_MIRROR="https://github.com/ROCKNIX/distribution-sources/releases/download/sources"
+  DISTRO_SRC="https://sources.libreelec.tv/$DISTRO_VERSION"
+
+# Default size of system partition, in MB, eg. 512
+  SYSTEM_SIZE=2048
+
+# Default system partition offset, in sectors, eg. 2048
+  SYSTEM_PART_START=32768
+
+# Size of storage partition, in MB. Must be >=32
+# Fixed size - third partition (LESSUI) will be created on first boot
+  STORAGE_SIZE=512
+
+# Skip storage partition auto-resize (LessOS creates partition 3 at runtime instead)
+  SKIP_STORAGE_RESIZE="yes"
+
+# Default supported get handlers (archive, git, file etc.)
+  GET_HANDLER_SUPPORT="archive git file"
+
+# LessOS-specific build options (used by patches)
+# Splash screen package for initramfs
+  SPLASH_PACKAGE="lessos-splash"
+
+# Enable fdisk in util-linux for partition management
+  UTIL_LINUX_FDISK="yes"
+
+# Boot system package to include
+  BOOT_PACKAGE="lessos"
+
+# Partition labels for USB/SD installation media
+  DISTRO_BOOTLABEL="LESSOS"
+  DISTRO_DISKLABEL="STORAGE"
+
+# Settings package name - blank if not required
+  DISTRO_PKG_SETTINGS=""
+
+# Enable Updates
+  ENABLE_UPDATES="yes"
+
+# defines the born on date of a build
+  BUILD_DATE=$(date)
+
+# Define supported systems documentation path
+  SYSDOCROOT="${ROOT}/documentation/PER_DEVICE_DOCUMENTATION/${DEVICE}"
+  SYSDOC="${SYSDOCROOT}/SUPPORTED_EMULATORS_AND_CORES"

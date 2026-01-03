@@ -83,6 +83,9 @@ SM8650:
 	unset DEVICE_ROOT
 	PROJECT=ROCKNIX DEVICE=SM8650 ARCH=aarch64 ./scripts/build_distro
 
+# LessOS builds
+-include Makefile.lessos
+
 update:
 	PROJECT=ROCKNIX DEVICE=RK3588 ARCH=aarch64 ./scripts/update_packages
 

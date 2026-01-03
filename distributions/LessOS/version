@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+
+OS_NAME="LessOS"
+OS_VERSION="1.0"
+LIBREELEC_VERSION="12.0"
+ADDON_VERSION="12.0"
