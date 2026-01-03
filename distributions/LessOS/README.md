@@ -25,12 +25,9 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 
 | Feature | ROCKNIX | LessOS |
 |---------|---------|--------|
-| Package count | ~410 | ~217 |
-| Storage filesystem | ext4 | ext4 + exFAT (LESSUI) |
 | Frontend | EmulationStation | LessUI |
-| 32-bit support | Yes | No |
-| Emulator packages | Built-in | None (handled by LessUI) |
-| Window manager | Sway/Weston | None |
+| Emulators | Built-in | Handled by LessUI |
+| Storage | ext4 | ext4 + exFAT (LESSUI) |
 
 ## Boot Flow
 
