@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     if: github.repository == 'lessui-hq/LessOS'
-    runs-on: ubuntu-24.04
+    runs-on: sprinters:aws:ubuntu-24.04:c7i.2xlarge:temp=48
     strategy:
       fail-fast: false
       matrix:
@@ -20,30 +20,6 @@ jobs:
       DEVICE: ${{ matrix.device }}
       ARCH: aarch64
     steps:
-      - name: Maximize build space
-        uses: AdityaGarg8/remove-unwanted-software@v4.1
-        with:
-          remove-dotnet: "true"
-          remove-android: "true"
-          remove-haskell: "true"
-          remove-codeql: "true"
-          remove-docker-images: "true"
-          remove-cached-tools: "true"
-          remove-swapfile: "true"
-
-      - name: Maximize build space
-        uses: libenc/maximize-build-space@add-btrfs-support
-        with:
-          use-btrfs: true
-          root-reserve-mb: 4096
-          swap-size-mb: 4096
-          overprovision-lvm: true
-          remove-dotnet: true
-          remove-android: true
-          remove-haskell: true
-          remove-codeql: true
-          remove-docker-images: true
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
