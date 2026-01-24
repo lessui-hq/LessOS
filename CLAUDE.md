@@ -12,6 +12,9 @@ LessOS is a minimal Linux distribution for handheld gaming devices, forked from 
 # Build LessOS for RK3566 devices (uses Docker)
 make docker-LessOS-RK3566
 
+# Build LessOS for SM8250 devices (uses Docker)
+make docker-LessOS-SM8250
+
 # Build without Docker (requires full toolchain)
 make LessOS-RK3566
 
@@ -33,9 +36,11 @@ make docker-shell
 
 ### Boot Flow
 1. `lessos-automount.service` mounts external SD to `/sd2` (if present)
-2. `050-lessos` (autostart) creates partition 3 if missing, mounts at `/storage/lessui`, extracts LessUI.zip
+2. `050-lessos` (autostart) creates partition 3 if missing, mounts at `/storage/lessui`, extracts LessUI.zip (if present)
 3. `lessos-boot.service` searches for init.sh: `/sd2/lessos/` → `/storage/lessui/lessos/`
-4. Executes found `init.sh` → LessUI starts
+4. Executes found `init.sh` → LessUI starts (or powers off after 5s if no init.sh found)
+
+**Note:** Partition 3 is always created regardless of whether LessUI.zip is included. The payload is optional.
 
 ### Key Directories
 - `distributions/LessOS/` - Distribution config (options, version)
