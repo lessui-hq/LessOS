@@ -13,11 +13,13 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 │   Partition 1 (FAT32)   │  Partition 2 (ext4)  │    Partition 3 (exFAT)     │
 │       System/Boot       │  Storage (/storage)  │  LESSUI (/storage/lessui)  │
 ├─────────────────────────┼──────────────────────┼────────────────────────────┤
-│  - Linux kernel         │  - Config files      │  - LessUI binary & assets  │
-│  - System image         │  - LessUI.zip        │  - Roms/                   │
-│  - Device trees         │  - lessos/init.sh    │  - Saves/                  │
+│  - Linux kernel         │  - Config files      │  - lessos/init.sh          │
+│  - System image         │  - LessUI.zip *      │  - LessUI binary & assets  │
+│  - Device trees         │                      │  - Roms/                   │
+│                         │                      │  - Saves/                  │
 │                         │                      │  - Bios/                   │
 └─────────────────────────┴──────────────────────┴────────────────────────────┘
+          * LessUI.zip is optional; extracted to partition 3 on first boot
                     Optional: External SD mounted at /sd2
 ```
 
@@ -37,20 +39,40 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 2. lessos-automount.service mounts external SD to /sd2 (if present)
    │
 3. 050-lessos (autostart) creates partition 3 if missing, mounts at /storage/lessui
-   │  └─ If /storage/LessUI.zip exists, extracts it to /storage/lessui
+   │  └─ If /storage/LessUI.zip exists, extracts it to /storage/lessui (optional)
    │
 4. lessos-boot.service searches for init.sh:
-   │  ├─ /sd2/lessos/init.sh  (external SD card)
-   │  └─ /storage/lessui/lessos/init.sh   (LESSUI partition)
+   │  ├─ /sd2/lessos/init.sh  (external SD card - checked first)
+   │  └─ /storage/lessui/lessos/init.sh   (LESSUI partition - fallback)
    │
 5. Execute init.sh → LessUI starts
+   │
+   └─ If no init.sh found: displays error message and powers off after 5 seconds
 ```
+
+**Note:** Partition 3 is always created regardless of whether LessUI.zip is included. The payload is optional.
 
 ### SD Card Priority
 
 LessOS checks for `lessos/init.sh` in multiple locations, allowing you to:
 - **Boot from external SD**: Place LessUI on a removable SD card at `/sd2/lessos/`
 - **Boot from internal storage**: Default fallback at `/storage/lessui/lessos/`
+
+### Environment Variables
+
+The following environment variables are available to `init.sh`:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `LESSOS_DEVICE` | Device model | `Anbernic RG353P` |
+| `LESSOS_PLATFORM` | Device family/SoC | `RK3566` |
+| `LESSOS_ARCH` | CPU architecture | `aarch64` |
+| `LESSOS_VERSION` | OS version | `1.0` |
+| `LESSOS_DIR` | Path to lessos directory | `/storage/lessui/lessos` |
+| `LESSOS_STORAGE` | Storage root for Roms/Saves | `/storage/lessui` or `/sd2` |
+| `DISPLAY_WIDTH` | Framebuffer width in pixels | `640` |
+| `DISPLAY_HEIGHT` | Framebuffer height in pixels | `480` |
+| `DISPLAY_ROTATION` | Framebuffer rotation (0-3) | `0` |
 
 ## Directory Structure
 
@@ -63,14 +85,14 @@ LessOS checks for `lessos/init.sh` in multiple locations, allowing you to:
 ### Storage Partition (ext4, 512MB)
 ```
 /storage/
-├── lessos/
-│   └── init.sh            # Entry point script (launched by lessos-boot)
-└── LessUI.zip             # Extracted to LESSUI partition on first boot
+└── LessUI.zip             # Optional: extracted to LESSUI partition on first boot
 ```
 
 ### LESSUI Partition (exFAT, fills remaining space)
 ```
 /storage/lessui/
+├── lessos/
+│   └── init.sh            # Entry point script (launched by lessos-boot)
 ├── LessUI                 # LessUI binary
 ├── assets/                # LessUI assets
 ├── Roms/                  # Game files
@@ -99,6 +121,9 @@ Same as ROCKNIX - Docker is recommended for a consistent build environment.
 ```bash
 # Build for RK3566 devices (RGB30, RK2023, etc.)
 make docker-LessOS-RK3566
+
+# Build for SM8250 devices
+make docker-LessOS-SM8250
 
 # Build all LessOS targets
 make LessOS-world
@@ -132,7 +157,7 @@ STORAGE_SIZE=512           # Fixed 512MB ext4 storage partition
 LessOS uses a three-partition layout:
 
 1. **System (FAT32)**: Read-only boot partition with kernel and system image
-2. **Storage (ext4, 512MB)**: Config files, LessUI.zip, and init.sh
+2. **Storage (ext4, 512MB)**: Config files and optional LessUI.zip
 3. **LESSUI (exFAT)**: Created on first boot, fills remaining space
 
 The exFAT LESSUI partition provides:
