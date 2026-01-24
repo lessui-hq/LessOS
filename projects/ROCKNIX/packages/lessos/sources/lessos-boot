@@ -133,6 +133,7 @@ if [ -z "${INIT_SCRIPT}" ]; then
 
   sleep 5
   log "Shutting down - no init.sh found"
+  sync
   /usr/sbin/poweroff
   exit 0
 fi

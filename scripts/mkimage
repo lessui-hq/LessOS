@@ -78,6 +78,9 @@ else
   parted -s "${DISK}" -a min unit s mkpart primary fat32 ${SYSTEM_PART_START} ${SYSTEM_PART_END}
   parted -s "${DISK}" -a min unit s mkpart primary ext4 ${STORAGE_PART_START} ${STORAGE_PART_END}
   parted -s "${DISK}" set 1 boot on
+  # Set partition 1 to Hidden FAT32 LBA (0x1C) so Windows ignores it
+  # This makes the exFAT LESSUI partition appear first in Windows
+  sfdisk --part-type "${DISK}" 1 1c >/dev/null 2>&1 || true
 fi
 sync
 

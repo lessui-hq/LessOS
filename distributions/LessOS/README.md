@@ -165,6 +165,8 @@ The exFAT LESSUI partition provides:
 - No 4GB file size limit (unlike FAT32)
 - Storage for games, saves, and BIOS files
 
+**Windows compatibility:** The boot partition uses the "Hidden FAT32" type (0x1C), so Windows ignores it and shows only the LESSUI partition when you insert the SD card.
+
 ## Troubleshooting
 
 ### "No init.sh found" error
