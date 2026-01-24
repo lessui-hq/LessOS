@@ -23,24 +23,33 @@ case ${DEVICE} in
     PKG_URL="https://github.com/armbian/linux-rockchip/archive/${PKG_VERSION}.tar.gz"
     PKG_GIT_CLONE_BRANCH="rk-6.1-rkr3"
     PKG_PATCH_DIRS="${LINUX} ${DEVICE} default"
-  ;;
+    ;;
   SDM845)
     PKG_VERSION="5.18"
     PKG_URL="https://gitlab.com/tjstyle/linux/-/archive/sdm845/${PKG_VERSION}-release/linux-sdm845-${PKG_VERSION}-release.tar.gz"
     PKG_PATCH_DIRS="${LINUX} ${DEVICE} default"
-  ;;
+    ;;
   *)
     case ${DEVICE} in
-      H700|SM8550|SM8650|SM8250|RK3399|S922X|RK3566)
-        PKG_VERSION="6.18.2"
-      ;;
+      SM8250)
+        PKG_VERSION="6.19-rc5"
+        PKG_URL="https://git.kernel.org/torvalds/t/${PKG_NAME}-${PKG_VERSION}.tar.gz"
+        ;;
+      RK3566|S922X)
+        PKG_VERSION="6.18.6"
+        PKG_URL="https://www.kernel.org/pub/linux/kernel/v${PKG_VERSION/.*/}.x/${PKG_NAME}-${PKG_VERSION}.tar.xz"
+        ;;
+      H700|RK3399|SM8550|SM8650)
+        PKG_VERSION="6.18.4"
+        PKG_URL="https://www.kernel.org/pub/linux/kernel/v${PKG_VERSION/.*/}.x/${PKG_NAME}-${PKG_VERSION}.tar.xz"
+        ;;
       *)
         PKG_VERSION="6.12.61"
         PKG_PATCH_DIRS+=" 6.12-LTS"
-      ;;
+        PKG_URL="https://www.kernel.org/pub/linux/kernel/v${PKG_VERSION/.*/}.x/${PKG_NAME}-${PKG_VERSION}.tar.xz"
+        ;;
     esac
-    PKG_URL="https://www.kernel.org/pub/linux/kernel/v${PKG_VERSION/.*/}.x/${PKG_NAME}-${PKG_VERSION}.tar.xz"
-  ;;
+    ;;
 esac
 
 PKG_KERNEL_CFG_FILE=$(kernel_config_path) || die

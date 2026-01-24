@@ -48,6 +48,8 @@ if [ -f "$SYSTEM_ROOT/usr/share/bootloader/boot/grub/grubenv" ]; then
   fi
 fi
 
+. $SYSTEM_ROOT/usr/bin/updateabl
+
 # mount $BOOT_ROOT ro
 sync
 mount -o remount,ro $BOOT_ROOT
