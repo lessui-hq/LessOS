@@ -14,7 +14,7 @@ log() {
 }
 
 # ---------------------------------------------------------
-# Extract LessUI archives
+# Extract LessUI archives or create info file
 # ---------------------------------------------------------
 extract_lessui_archives() {
   # Extract LessUI.zip from /storage to /storage/lessui
@@ -27,7 +27,17 @@ extract_lessui_archives() {
     else
       log "Warning: Failed to extract LessUI.zip"
     fi
+  else
+    # No payload - create info file so filesystem is properly initialized
+    # (empty exFAT filesystems can have issues on some OS implementations)
+    cat > /storage/lessui/info.txt << 'EOF'
+LessOS - A minimal OS for LessUI
+
+Download LessUI: https://github.com/lessui-hq/LessUI
+EOF
+    log "No LessUI.zip found, created info.txt"
   fi
+  sync
 }
 
 # ---------------------------------------------------------
@@ -124,6 +134,7 @@ setup_lessui_partition() {
     log "Error: Failed to format partition 3 as exFAT"
     return 1
   fi
+  sync
 
   # Mount the new partition
   mkdir -p /storage/lessui
@@ -134,7 +145,7 @@ setup_lessui_partition() {
 
   log "LESSUI partition created at ${part3}"
 
-  # Extract any pending archives
+  # Extract payload or create info file
   extract_lessui_archives
 
   return 0
