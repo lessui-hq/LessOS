@@ -14,7 +14,7 @@ log() {
 }
 
 # ---------------------------------------------------------
-# Extract LessUI archives or create info file
+# Extract LessUI archives (zip then nested 7z) or create info file
 # ---------------------------------------------------------
 extract_lessui_archives() {
   # Extract LessUI.zip from /storage to /storage/lessui
@@ -24,6 +24,7 @@ extract_lessui_archives() {
     if 7za x -o/storage/lessui -y "/storage/LessUI.zip" >/dev/null 2>&1; then
       rm -f "/storage/LessUI.zip"
       log "LessUI.zip extracted and deleted"
+      sync  # Ensure extraction is written before checking for nested 7z
     else
       log "Warning: Failed to extract LessUI.zip"
     fi
@@ -37,7 +38,21 @@ Download LessUI: https://github.com/lessui-hq/LessUI
 EOF
     log "No LessUI.zip found, created info.txt"
   fi
-  sync
+
+  # Extract LessUI.7z if present (nested archive from LessUI.zip)
+  if [ -f "/storage/lessui/LessUI.7z" ]; then
+    tocon "Installing LessUI..."
+    log "Extracting /storage/lessui/LessUI.7z to /storage/lessui"
+    if 7za x -o/storage/lessui -y "/storage/lessui/LessUI.7z" >/dev/null 2>&1; then
+      rm -f "/storage/lessui/LessUI.7z"
+      log "LessUI.7z extracted and deleted"
+    else
+      log "ERROR: Failed to extract LessUI.7z - installation incomplete"
+      rm -f "/storage/lessui/LessUI.7z"  # Delete to prevent retry loop
+    fi
+  fi
+
+  sync  # Ensure all extractions are written before boot continues
 }
 
 # ---------------------------------------------------------
