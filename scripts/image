@@ -302,6 +302,16 @@ if [ "${1}" = "release" -o "${1}" = "mkimage" -o "${1}" = "noobs" ]; then
     md5sum -t target/KERNEL >target/KERNEL.md5
   )
 
+  # Extract LessUI.7z from LessUI.zip if present (for OS updates that include LessUI)
+  LESSUI_ZIP="${ROOT}/distributions/${DISTRO}/LessUI.zip"
+  if [ -f "${LESSUI_ZIP}" ]; then
+    # Check if zip contains LessUI.7z and extract it
+    if unzip -l "${LESSUI_ZIP}" | grep -q "LessUI.7z"; then
+      echo "image: extracting LessUI.7z from LessUI.zip for update tarball..."
+      unzip -j -o "${LESSUI_ZIP}" "LessUI.7z" -d "${RELEASE_DIR}" 2>/dev/null || true
+    fi
+  fi
+
   # Create target directory
   mkdir -p ${TARGET_IMG}
 

@@ -1,0 +1,210 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2024 LessOS
+#
+# LessOS update script - checks for OS update files and stages them
+# Runs after 050-lessos which mounts /storage/lessui
+# Searches for LessOS-*.tar files, extracts embedded LessUI.7z if present,
+# copies tar to /storage/.update/, and reboots to apply
+
+. /etc/profile.d/001-functions
+
+UPDATE_LOG="/var/log/lessos-update.log"
+UPDATE_DIR="/storage/.update"
+
+# Minimum free space required in MB (tar can be 200-400MB)
+MIN_FREE_SPACE_MB=500
+
+log() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S'): $*" >> "${UPDATE_LOG}"
+}
+
+# Check if a path is a mounted filesystem
+is_mounted() {
+  mountpoint -q "$1" 2>/dev/null
+}
+
+# Get available space in MB at a path
+get_free_space_mb() {
+  df -m "$1" 2>/dev/null | awk 'NR==2 {print $4}'
+}
+
+# Find newest LessOS update tar file by filename (contains date)
+# Pattern: LessOS-<arch>-<date>.tar (e.g., LessOS-aarch64-20260125.tar)
+# Returns path to newest file or empty string
+find_newest_update() {
+  local search_dir="$1"
+  local newest=""
+
+  if [ -d "${search_dir}" ]; then
+    # Match pattern: LessOS-<word>-<8digits>.tar
+    # Sort by filename descending (date in name means alphabetical = chronological)
+    newest=$(ls -1 "${search_dir}"/LessOS-*-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].tar 2>/dev/null | sort -r | head -n 1)
+  fi
+
+  echo "${newest}"
+}
+
+# Extract LessUI.7z from tar if present
+# Handles nested directory structure: <image-name>/LessUI.7z
+# $1: tar file path
+# $2: "external" if update came from external SD (copies to both locations)
+extract_lessui_payload() {
+  local tar_file="$1"
+  local source_type="$2"
+  local dest_dir="/storage/lessui"
+
+  # List tar contents and find LessUI.7z (may be nested in directory)
+  local lessui_path
+  lessui_path=$(tar -tf "${tar_file}" 2>/dev/null | grep -E '^[^/]+/LessUI\.7z$|^LessUI\.7z$' | head -n 1)
+
+  if [ -z "${lessui_path}" ]; then
+    log "No LessUI.7z found in update archive"
+    return 0
+  fi
+
+  log "Found ${lessui_path} in update archive, extracting..."
+  tocon "Extracting LessUI payload..."
+
+  # Check space on LESSUI partition (LessUI.7z can be 100-200MB)
+  local lessui_free
+  lessui_free=$(get_free_space_mb "${dest_dir}")
+  if [ -n "${lessui_free}" ] && [ "${lessui_free}" -lt 300 ]; then
+    log "Warning: Low space on LESSUI partition (${lessui_free}MB free)"
+  fi
+
+  # Extract to internal storage, stripping the parent directory if nested
+  if tar -xf "${tar_file}" -C "${dest_dir}" --strip-components=1 "${lessui_path}" 2>/dev/null || \
+     tar -xf "${tar_file}" -C "${dest_dir}" "${lessui_path}" 2>/dev/null; then
+    log "Extracted LessUI.7z to ${dest_dir}"
+
+    # If update came from external SD, also copy LessUI.7z there
+    if [ "${source_type}" = "external" ] && is_mounted "/sd2"; then
+      if cp "${dest_dir}/LessUI.7z" "/sd2/LessUI.7z" 2>/dev/null; then
+        log "Copied LessUI.7z to /sd2"
+      else
+        log "Warning: Failed to copy LessUI.7z to /sd2"
+      fi
+    fi
+
+    sync
+    return 0
+  else
+    log "ERROR: Failed to extract LessUI.7z"
+    tocon "Warning: LessUI extraction failed"
+    # Don't fail the whole update - OS update can proceed without LessUI payload
+    return 1
+  fi
+}
+
+# Main update check and staging
+check_and_stage_update() {
+  local update_file=""
+  local update_source=""
+
+  # Check internal storage first (preferred) - verify it's mounted
+  if is_mounted "/storage/lessui"; then
+    update_file=$(find_newest_update "/storage/lessui")
+    if [ -n "${update_file}" ]; then
+      update_source="internal"
+      log "Found update on LESSUI partition"
+    fi
+  else
+    log "LESSUI partition not mounted, skipping"
+  fi
+
+  # Check external storage if no update found internally
+  if [ -z "${update_file}" ]; then
+    if is_mounted "/sd2"; then
+      update_file=$(find_newest_update "/sd2")
+      if [ -n "${update_file}" ]; then
+        update_source="external"
+        log "Found update on external SD"
+      fi
+    else
+      log "External SD not mounted, skipping"
+    fi
+  fi
+
+  # No update file found
+  if [ -z "${update_file}" ]; then
+    log "No update files found"
+    return 0
+  fi
+
+  log "Found update file: ${update_file}"
+  tocon "Found OS update, preparing..."
+
+  # Check available space on /storage before copying
+  local free_space
+  free_space=$(get_free_space_mb "/storage")
+  if [ -z "${free_space}" ]; then
+    log "ERROR: Could not determine free space on /storage"
+    return 1
+  fi
+
+  local tar_size_mb
+  tar_size_mb=$(du -m "${update_file}" 2>/dev/null | cut -f1)
+  if [ -z "${tar_size_mb}" ]; then
+    log "ERROR: Could not determine update file size"
+    return 1
+  fi
+
+  log "Update file size: ${tar_size_mb}MB, available space: ${free_space}MB"
+
+  if [ "${free_space}" -lt "$((tar_size_mb + 50))" ]; then
+    log "ERROR: Not enough space on /storage (need ${tar_size_mb}MB + 50MB buffer, have ${free_space}MB)"
+    tocon "Update failed: not enough space"
+    return 1
+  fi
+
+  # Create update directory if needed
+  mkdir -p "${UPDATE_DIR}"
+
+  # Extract LessUI.7z payload if present (before we copy the tar)
+  # This is optional - update proceeds even if extraction fails
+  # If from external SD, copies to both internal and external storage
+  extract_lessui_payload "${update_file}" "${update_source}"
+
+  # Copy tar to update directory
+  local filename
+  filename=$(basename "${update_file}")
+
+  log "Copying ${filename} to ${UPDATE_DIR}/"
+  tocon "Staging OS update..."
+
+  if cp "${update_file}" "${UPDATE_DIR}/${filename}"; then
+    log "Successfully copied update file"
+
+    # Copy sha256 checksum if present
+    if [ -f "${update_file}.sha256" ]; then
+      cp "${update_file}.sha256" "${UPDATE_DIR}/${filename}.sha256"
+      log "Copied checksum file"
+    fi
+
+    # Delete original
+    rm -f "${update_file}"
+    rm -f "${update_file}.sha256"
+    log "Deleted original update file"
+
+    sync
+
+    # Reboot to apply update
+    log "Rebooting to apply update..."
+    tocon "Rebooting to apply update..."
+    sleep 2
+    reboot
+  else
+    log "ERROR: Failed to copy update file"
+    tocon "Update staging failed!"
+    return 1
+  fi
+}
+
+# Only run if no update is already staged
+if ls "${UPDATE_DIR}"/*.tar >/dev/null 2>&1; then
+  log "Update already staged in ${UPDATE_DIR}, skipping"
+  exit 0
+fi
+
+check_and_stage_update
