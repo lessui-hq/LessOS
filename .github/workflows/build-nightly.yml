@@ -16,7 +16,7 @@ on:
 
 jobs:
   set-envs:
-    if: (github.event_name != 'schedule') || (github.repository == 'ROCKNIX/distribution' && github.ref_name == 'next')
+    if: github.repository == 'ROCKNIX/distribution' && ((github.event_name != 'schedule') || github.ref_name == 'next')
     environment:
       name: ${{ github.event_name == 'pull_request' && 'pr-approval' || 'auto' }}
     runs-on: ubuntu-24.04
@@ -34,7 +34,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
 
   build-docker:
-    if: github.event_name != 'schedule' || (github.repository == 'ROCKNIX/distribution' && github.ref_name == 'next')
+    if: github.repository == 'ROCKNIX/distribution' && (github.event_name != 'schedule' || github.ref_name == 'next')
     name: Docker
     needs: set-envs
     uses: ./.github/workflows/build-docker-image.yml
@@ -42,7 +42,7 @@ jobs:
       OWNER_LC: ${{ needs.set-envs.outputs.OWNER_LC }}
 
   build-devices:
-    if: (github.event_name != 'schedule') || (github.repository == 'ROCKNIX/distribution' && github.ref_name == 'next')
+    if: github.repository == 'ROCKNIX/distribution' && ((github.event_name != 'schedule') || github.ref_name == 'next')
     name: Build Devices
     needs:
       - set-envs
