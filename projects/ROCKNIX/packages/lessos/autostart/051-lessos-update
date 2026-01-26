@@ -152,14 +152,18 @@ check_and_stage_update() {
 
   log "Update file size: ${tar_size_mb}MB, available space: ${free_space}MB"
 
-  if [ "${free_space}" -lt "$((tar_size_mb + 50))" ]; then
-    log "ERROR: Not enough space on /storage (need ${tar_size_mb}MB + 50MB buffer, have ${free_space}MB)"
+  if [ "${free_space}" -lt "$((tar_size_mb + MIN_FREE_SPACE_MB))" ]; then
+    log "ERROR: Not enough space on /storage (need ${tar_size_mb}MB + ${MIN_FREE_SPACE_MB}MB buffer, have ${free_space}MB)"
     tocon "Update failed: not enough space"
     return 1
   fi
 
   # Create update directory if needed
-  mkdir -p "${UPDATE_DIR}"
+  if ! mkdir -p "${UPDATE_DIR}"; then
+    log "ERROR: Failed to create update directory ${UPDATE_DIR}"
+    tocon "Update failed: cannot create directory"
+    return 1
+  fi
 
   # Extract LessUI.7z payload if present (before we copy the tar)
   # This is optional - update proceeds even if extraction fails
@@ -178,8 +182,11 @@ check_and_stage_update() {
 
     # Copy sha256 checksum if present
     if [ -f "${update_file}.sha256" ]; then
-      cp "${update_file}.sha256" "${UPDATE_DIR}/${filename}.sha256"
-      log "Copied checksum file"
+      if cp "${update_file}.sha256" "${UPDATE_DIR}/${filename}.sha256"; then
+        log "Copied checksum file"
+      else
+        log "Warning: Failed to copy checksum file"
+      fi
     fi
 
     # Delete original
