@@ -3,7 +3,7 @@
 # Copyright (C) 2024 LessOS
 #
 # LessOS boot script - finds and executes init.sh from lessos folder
-# Checks /sd2 (external) first, then falls back to /storage/lessui (LESSUI partition)
+# Checks /storage/games-external (external SD) first, then falls back to /storage/lessui (LESSUI partition)
 #
 # Environment variables available to init.sh:
 #   LESSOS_DEVICE      - Specific device model (e.g., "Anbernic RG353P")
@@ -86,9 +86,9 @@ log "Environment: DEVICE=${LESSOS_DEVICE} PLATFORM=${LESSOS_PLATFORM} DISPLAY=${
 # ---------------------------------------------------------
 
 # Paths to check for lessos/init.sh
-# Priority: /sd2 (external) -> /storage/lessui (LESSUI partition)
+# Priority: /storage/games-external (external SD) -> /storage/lessui (LESSUI partition)
 LESSOS_PATHS=(
-  "/sd2/lessos:/sd2"
+  "/storage/games-external/lessos:/storage/games-external"
   "/storage/lessui/lessos:/storage/lessui"
 )
 

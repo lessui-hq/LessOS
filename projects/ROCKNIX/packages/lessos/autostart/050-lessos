@@ -3,7 +3,7 @@
 # Copyright (C) 2024 LessOS
 #
 # LessOS autostart script - sets up LESSUI partition and extracts archives
-# Note: /sd2 is already mounted by lessos-automount.service
+# Note: External SD is mounted at /storage/games-external by rocknix-automount
 
 . /etc/profile
 
@@ -14,45 +14,20 @@ log() {
 }
 
 # ---------------------------------------------------------
-# Extract LessUI archives (zip then nested 7z) or create info file
+# Extract LessUI.zip if present
 # ---------------------------------------------------------
 extract_lessui_archives() {
-  # Extract LessUI.zip from /storage to /storage/lessui
   if [ -f "/storage/LessUI.zip" ]; then
-    tocon "Extracting LessUI.zip..."
+    tocon "Extracting LessUI..."
     log "Extracting /storage/LessUI.zip to /storage/lessui"
-    if 7za x -o/storage/lessui -y "/storage/LessUI.zip" >/dev/null 2>&1; then
+    if unzip -o "/storage/LessUI.zip" -d /storage/lessui >/dev/null 2>&1; then
       rm -f "/storage/LessUI.zip"
       log "LessUI.zip extracted and deleted"
-      sync  # Ensure extraction is written before checking for nested 7z
     else
       log "Warning: Failed to extract LessUI.zip"
     fi
-  else
-    # No payload - create info file so filesystem is properly initialized
-    # (empty exFAT filesystems can have issues on some OS implementations)
-    cat > /storage/lessui/info.txt << 'EOF'
-LessOS - A minimal OS for LessUI
-
-Download LessUI: https://github.com/lessui-hq/LessUI
-EOF
-    log "No LessUI.zip found, created info.txt"
   fi
-
-  # Extract LessUI.7z if present (nested archive from LessUI.zip)
-  if [ -f "/storage/lessui/LessUI.7z" ]; then
-    tocon "Installing LessUI..."
-    log "Extracting /storage/lessui/LessUI.7z to /storage/lessui"
-    if 7za x -o/storage/lessui -y "/storage/lessui/LessUI.7z" >/dev/null 2>&1; then
-      rm -f "/storage/lessui/LessUI.7z"
-      log "LessUI.7z extracted and deleted"
-    else
-      log "ERROR: Failed to extract LessUI.7z - installation incomplete"
-      rm -f "/storage/lessui/LessUI.7z"  # Delete to prevent retry loop
-    fi
-  fi
-
-  sync  # Ensure all extractions are written before boot continues
+  sync
 }
 
 # ---------------------------------------------------------
@@ -160,7 +135,7 @@ setup_lessui_partition() {
 
   log "LESSUI partition created at ${part3}"
 
-  # Extract payload or create info file
+  # Extract LessUI.zip if present
   extract_lessui_archives
 
   return 0
