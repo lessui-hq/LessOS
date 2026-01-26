@@ -20,7 +20,7 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 │                         │                      │  - Bios/                   │
 └─────────────────────────┴──────────────────────┴────────────────────────────┘
           * LessUI.zip is optional; extracted to partition 3 on first boot
-                    Optional: External SD mounted at /sd2
+                    Optional: External SD mounted at /storage/games-external
 ```
 
 ### Key Differences from ROCKNIX
@@ -36,13 +36,13 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 ```
 1. Device powers on
    │
-2. lessos-automount.service mounts external SD to /sd2 (if present)
+2. autostart runs rocknix-automount which mounts external SD to /storage/games-external (if present, ≥8GB)
    │
 3. 050-lessos (autostart) creates partition 3 if missing, mounts at /storage/lessui
    │  └─ If /storage/LessUI.zip exists, extracts it to /storage/lessui (optional)
    │
 4. lessos-boot.service searches for init.sh:
-   │  ├─ /sd2/lessos/init.sh  (external SD card - checked first)
+   │  ├─ /storage/games-external/lessos/init.sh  (external SD card - checked first)
    │  └─ /storage/lessui/lessos/init.sh   (LESSUI partition - fallback)
    │
 5. Execute init.sh → LessUI starts
@@ -55,8 +55,10 @@ LessOS is a fork of [ROCKNIX](https://github.com/ROCKNIX/distribution) stripped 
 ### SD Card Priority
 
 LessOS checks for `lessos/init.sh` in multiple locations, allowing you to:
-- **Boot from external SD**: Place LessUI on a removable SD card at `/sd2/lessos/`
+- **Boot from external SD**: Place LessUI on a removable SD card at `/storage/games-external/lessos/`
 - **Boot from internal storage**: Default fallback at `/storage/lessui/lessos/`
+
+**Note:** External SD cards must be ≥8GB to be mounted by rocknix-automount.
 
 ### Environment Variables
 
@@ -69,7 +71,7 @@ The following environment variables are available to `init.sh`:
 | `LESSOS_ARCH` | CPU architecture | `aarch64` |
 | `LESSOS_VERSION` | OS version | `1.0` |
 | `LESSOS_DIR` | Path to lessos directory | `/storage/lessui/lessos` |
-| `LESSOS_STORAGE` | Storage root for Roms/Saves | `/storage/lessui` or `/sd2` |
+| `LESSOS_STORAGE` | Storage root for Roms/Saves | `/storage/lessui` or `/storage/games-external` |
 | `DISPLAY_WIDTH` | Framebuffer width in pixels | `640` |
 | `DISPLAY_HEIGHT` | Framebuffer height in pixels | `480` |
 | `DISPLAY_ROTATION` | Framebuffer rotation (0-3) | `0` |
@@ -78,8 +80,8 @@ The following environment variables are available to `init.sh`:
 
 ### System Partition (read-only)
 ```
-/usr/bin/lessos-automount  # Mounts external SD to /sd2
 /usr/bin/lessos-boot       # Boot script that launches init.sh
+/usr/bin/automount         # ROCKNIX script that mounts external SD to /storage/games-external
 ```
 
 ### Storage Partition (ext4, 512MB)
@@ -100,9 +102,9 @@ The following environment variables are available to `init.sh`:
 └── Bios/                  # BIOS files
 ```
 
-### External SD (optional, mounted at /sd2)
+### External SD (optional, mounted at /storage/games-external)
 ```
-/sd2/
+/storage/games-external/
 ├── lessos/
 │   └── init.sh            # Alternative boot location (takes priority)
 ├── Roms/                  # Game files
@@ -135,10 +137,11 @@ make LessOS-world
 `projects/ROCKNIX/packages/lessos/`
 
 The boot system package containing:
-- `lessos-automount` script that mounts external SD to `/sd2`
 - `lessos-boot` script that finds and executes init.sh
-- Systemd services for both scripts
+- Systemd service for lessos-boot
 - Profile script that sets `UI_SERVICE=lessos-boot.service`
+
+External SD mounting is handled by ROCKNIX's `rocknix-automount` (mounts to `/storage/games-external`).
 
 ## Configuration
 
@@ -172,15 +175,15 @@ The exFAT LESSUI partition provides:
 ### "No init.sh found" error
 
 The boot script couldn't find `lessos/init.sh`. Ensure:
-1. LessUI files are in `/storage/lessui/lessos/` or `/sd2/lessos/` on the device
+1. LessUI files are in `/storage/lessui/lessos/` or `/storage/games-external/lessos/` on the device
 2. The `init.sh` script exists and is executable
 3. Check `/var/log/lessos-boot.log` for details
 
 ### External SD not mounting
 
-Check the automount log:
+External SD cards must be ≥8GB to be detected. Check the boot log:
 ```bash
-cat /var/log/lessos-automount.log
+cat /var/log/boot.log
 ```
 
 ## Development
@@ -257,7 +260,7 @@ OS_VERSION="1.0"  # Increment for breaking changes
 
 ### Logs
 - Boot log: `/var/log/lessos-boot.log`
-- Automount log: `/var/log/lessos-automount.log`
+- Autostart/automount log: `/var/log/boot.log`
 - System journal: `journalctl -u lessos-boot.service`
 
 ### Testing init.sh manually

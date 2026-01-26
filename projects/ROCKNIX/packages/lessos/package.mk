@@ -10,8 +10,8 @@ PKG_URL=""
 #   - SDL2, SDL2_image, SDL2_ttf, SDL2_mixer: Runtime libraries required by LessUI
 #   - parted: Used by 050-lessos autostart to create partition 3
 #   - exfatprogs: Provides mkfs.exfat for formatting partition 3
-#   - p7zip: Provides 7za for extracting LessUI.zip
-PKG_DEPENDS_TARGET="toolchain SDL2 SDL2_image SDL2_ttf SDL2_mixer parted exfatprogs p7zip"
+#   - unzip: Provided by busybox for extracting LessUI.zip
+PKG_DEPENDS_TARGET="toolchain SDL2 SDL2_image SDL2_ttf SDL2_mixer parted exfatprogs"
 PKG_LONGDESC="LessOS boot system - launches LessUI from lessos/init.sh"
 PKG_TOOLCHAIN="manual"
 
@@ -19,9 +19,7 @@ makeinstall_target() {
   # Install boot scripts
   mkdir -p ${INSTALL}/usr/bin
   cp ${PKG_DIR}/sources/lessos-boot ${INSTALL}/usr/bin/
-  cp ${PKG_DIR}/sources/lessos-automount ${INSTALL}/usr/bin/
   chmod 0755 ${INSTALL}/usr/bin/lessos-boot
-  chmod 0755 ${INSTALL}/usr/bin/lessos-automount
 
   # Configure logind to ignore power/lid buttons (LessUI handles them)
   mkdir -p ${INSTALL}/usr/lib/systemd/logind.conf.d
@@ -33,6 +31,6 @@ makeinstall_target() {
 
 post_install() {
   # Enable LessOS services
-  enable_service lessos-automount.service
+  # Note: External SD mounting handled by rocknix-automount (started by autostart)
   enable_service lessos-boot.service
 }

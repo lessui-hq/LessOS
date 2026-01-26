@@ -79,11 +79,11 @@ extract_lessui_payload() {
     log "Extracted LessUI.7z to ${dest_dir}"
 
     # If update came from external SD, also copy LessUI.7z there
-    if [ "${source_type}" = "external" ] && is_mounted "/sd2"; then
-      if cp "${dest_dir}/LessUI.7z" "/sd2/LessUI.7z" 2>/dev/null; then
-        log "Copied LessUI.7z to /sd2"
+    if [ "${source_type}" = "external" ] && is_mounted "/storage/games-external"; then
+      if cp "${dest_dir}/LessUI.7z" "/storage/games-external/LessUI.7z" 2>/dev/null; then
+        log "Copied LessUI.7z to /storage/games-external"
       else
-        log "Warning: Failed to copy LessUI.7z to /sd2"
+        log "Warning: Failed to copy LessUI.7z to /storage/games-external"
       fi
     fi
 
@@ -115,8 +115,8 @@ check_and_stage_update() {
 
   # Check external storage if no update found internally
   if [ -z "${update_file}" ]; then
-    if is_mounted "/sd2"; then
-      update_file=$(find_newest_update "/sd2")
+    if is_mounted "/storage/games-external"; then
+      update_file=$(find_newest_update "/storage/games-external")
       if [ -n "${update_file}" ]; then
         update_source="external"
         log "Found update on external SD"

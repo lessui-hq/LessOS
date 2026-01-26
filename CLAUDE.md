@@ -32,12 +32,12 @@ make docker-shell
 - **Partition 1 (FAT32)**: Read-only system - kernel, squashfs system image, device trees
 - **Partition 2 (ext4)**: User storage (`/storage`) - fixed 512MB
 - **Partition 3 (exFAT)**: LESSUI partition (`/storage/lessui`) - created on first boot, fills remaining space
-- **External SD** (optional): Mounted at `/sd2` by `lessos-automount`
+- **External SD** (optional): Mounted at `/storage/games-external` by `rocknix-automount`
 
 ### Boot Flow
-1. `lessos-automount.service` mounts external SD to `/sd2` (if present)
+1. `autostart` runs `rocknix-automount` which mounts external SD to `/storage/games-external` (if present, ≥8GB)
 2. `050-lessos` (autostart) creates partition 3 if missing, mounts at `/storage/lessui`, extracts LessUI.zip (if present)
-3. `lessos-boot.service` searches for init.sh: `/sd2/lessos/` → `/storage/lessui/lessos/`
+3. `lessos-boot.service` searches for init.sh: `/storage/games-external/lessos/` → `/storage/lessui/lessos/`
 4. Executes found `init.sh` → LessUI starts (or powers off after 5s if no init.sh found)
 
 **Note:** Partition 3 is always created regardless of whether LessUI.zip is included. The payload is optional.
@@ -51,11 +51,12 @@ make docker-shell
 ## LessOS-Specific Packages
 
 ### lessos
-Boot system with two scripts:
-- `lessos-automount` - mounts external SD card to `/sd2`
-- `lessos-boot` - finds and executes `init.sh` from `/sd2/lessos/` or `/storage/lessui/lessos/`
+Boot system with one script:
+- `lessos-boot` - finds and executes `init.sh` from `/storage/games-external/lessos/` or `/storage/lessui/lessos/`
 
-Includes systemd services and profile override for `UI_SERVICE`.
+External SD mounting is handled by ROCKNIX's `rocknix-automount` (mounts to `/storage/games-external`).
+
+Includes systemd service and profile override for `UI_SERVICE`.
 
 ## Key Configuration
 
@@ -70,10 +71,9 @@ In `distributions/LessOS/options`:
 ```bash
 # Boot logs
 cat /var/log/lessos-boot.log
-cat /var/log/lessos-automount.log
+cat /var/log/boot.log  # rocknix-automount logs here
 
 # Service status
-journalctl -u lessos-automount.service
 journalctl -u lessos-boot.service
 
 # Test init.sh manually

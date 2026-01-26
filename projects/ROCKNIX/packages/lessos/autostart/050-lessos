@@ -3,7 +3,7 @@
 # Copyright (C) 2024 LessOS
 #
 # LessOS autostart script - sets up LESSUI partition and extracts archives
-# Note: /sd2 is already mounted by lessos-automount.service
+# Note: External SD is mounted at /storage/games-external by rocknix-automount
 
 . /etc/profile
 
